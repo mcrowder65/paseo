@@ -114,18 +114,24 @@ export interface PlainScriptConfig {
   type?: undefined;
   command: string;
   port?: undefined;
+  url?: undefined;
 }
 
 export interface ServiceScriptConfig {
   type: "service";
   command: string;
   port?: number; // explicit port override, otherwise auto-assigned
+  url?: string; // service serves this URL itself; Paseo links to it and proxies nothing
 }
 
 export type ScriptConfig = PlainScriptConfig | ServiceScriptConfig;
 
 export function isServiceScript(config: ScriptConfig): config is ServiceScriptConfig {
   return "type" in config && config.type === "service";
+}
+
+export function isProxiedServiceScript(config: ScriptConfig): boolean {
+  return isServiceScript(config) && config.url === undefined;
 }
 
 export class WorktreeSetupError extends Error {
@@ -319,6 +325,26 @@ export function getWorktreeTerminalSpecs(repoRoot: string): WorktreeTerminalConf
   return specs;
 }
 
+function parseDeclaredServiceUrl(value: unknown): string | undefined {
+  if (typeof value !== "string") {
+    return undefined;
+  }
+  const url = value.trim();
+  if (!url) {
+    return undefined;
+  }
+  let parsed: URL;
+  try {
+    parsed = new URL(url);
+  } catch {
+    return undefined;
+  }
+  if (parsed.protocol !== "http:" && parsed.protocol !== "https:") {
+    return undefined;
+  }
+  return url;
+}
+
 export function getScriptConfigs(config: PaseoConfig | null): Map<string, ScriptConfig> {
   const scripts = config?.scripts;
   if (!scripts || typeof scripts !== "object") {
@@ -354,6 +380,13 @@ export function getScriptConfigs(config: PaseoConfig | null): Map<string, Script
       Number.isFinite(entry.port)
     ) {
       scriptConfig.port = entry.port;
+    }
+
+    if (isServiceScript(scriptConfig)) {
+      const declaredUrl = parseDeclaredServiceUrl(entry.url);
+      if (declaredUrl) {
+        scriptConfig.url = declaredUrl;
+      }
     }
 
     result.set(name, scriptConfig);

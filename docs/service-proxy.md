@@ -6,6 +6,8 @@ Paseo proxies HTTP traffic to services running inside your workspaces. Localhost
 
 When a `paseo.json` script of `"type": "service"` starts, Paseo assigns it a local port and registers a route in the service proxy. Incoming requests whose `Host` header matches the script's generated hostname are forwarded to that port.
 
+A service that declares its own `url` is the exception: it is supervised like any other service but gets no port, no route, and no service env vars, and its links point at the declared url. The proxy speaks plain HTTP to `127.0.0.1`, so a dev server that terminates TLS itself or needs a specific hostname (cert SNI, cookie origin, an SSO redirect origin) cannot be proxied at all. See [public-docs/worktrees.md](../public-docs/worktrees.md).
+
 The generated hostname is built from the script name, branch, and project:
 
 ```

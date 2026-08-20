@@ -33,6 +33,21 @@ describe("paseo config schema", () => {
     });
   });
 
+  it("parses a service script that declares its own url", () => {
+    const config = {
+      scripts: {
+        dev: {
+          type: "service",
+          command: "just dev",
+          url: "https://feat-x.falcon.local.com:8443",
+        },
+      },
+    };
+
+    expect(PaseoConfigSchema.parse(config)).toEqual(config);
+    expect(PaseoConfigRawSchema.parse(config)).toEqual(config);
+  });
+
   it("parses service port allocation", () => {
     expect(
       PaseoConfigSchema.parse({

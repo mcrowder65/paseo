@@ -1149,6 +1149,51 @@ describe.skipIf(isPlatform("win32"))("worktree POSIX-only", () => {
       expect(isServiceScript(server!)).toBe(true);
     });
 
+    it("parses a declared service url verbatim and drops unusable ones", async () => {
+      writeFileSync(
+        join(repoDir, "paseo.json"),
+        JSON.stringify({
+          scripts: {
+            declared: {
+              type: "service",
+              command: "just dev",
+              url: "  https://feat-x.falcon.local.com:8443  ",
+            },
+            notAUrl: {
+              type: "service",
+              command: "just dev",
+              url: "feat-x.falcon.local.com:8443",
+            },
+            wrongProtocol: {
+              type: "service",
+              command: "just dev",
+              url: "ftp://feat-x.falcon.local.com",
+            },
+            plain: {
+              command: "npm test",
+              url: "https://feat-x.falcon.local.com",
+            },
+          },
+        }),
+      );
+
+      expect(getScriptConfigs(loadConfigForTest(repoDir))).toEqual(
+        new Map([
+          [
+            "declared",
+            {
+              type: "service",
+              command: "just dev",
+              url: "https://feat-x.falcon.local.com:8443",
+            },
+          ],
+          ["notAUrl", { type: "service", command: "just dev" }],
+          ["wrongProtocol", { type: "service", command: "just dev" }],
+          ["plain", { command: "npm test" }],
+        ]),
+      );
+    });
+
     it("ignores invalid script entries gracefully", async () => {
       writeFileSync(
         join(repoDir, "paseo.json"),

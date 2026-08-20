@@ -5,7 +5,12 @@ import type {
   WorkspaceScriptPayload,
 } from "@getpaseo/protocol/messages";
 import type { PaseoConfig } from "@getpaseo/protocol/paseo-config-schema";
-import { getScriptConfigs, isServiceScript, readPaseoConfig } from "../utils/worktree.js";
+import {
+  getScriptConfigs,
+  isProxiedServiceScript,
+  isServiceScript,
+  readPaseoConfig,
+} from "../utils/worktree.js";
 import { deriveProjectSlug } from "./workspace-git-metadata.js";
 import type { ScriptHealthEntry, ScriptHealthState } from "./script-health-monitor.js";
 import type {
@@ -113,6 +118,28 @@ function buildConfiguredPlainScriptPayload(
   };
 }
 
+function buildDeclaredUrlServicePayload(
+  scriptName: string,
+  declaredUrl: string,
+  configuredPort: number | null,
+  runtimeEntry: RuntimeEntry | null,
+): WorkspaceScriptPayload {
+  return {
+    scriptName,
+    type: "service",
+    hostname: scriptName,
+    port: configuredPort,
+    declaredUrl,
+    localProxyUrl: null,
+    publicProxyUrl: null,
+    proxyUrl: null,
+    lifecycle: runtimeEntry?.lifecycle ?? "stopped",
+    health: null,
+    exitCode: runtimeEntry?.exitCode ?? null,
+    terminalId: runtimeEntry?.terminalId ?? null,
+  };
+}
+
 function buildConfiguredScriptPayload(
   scriptName: string,
   config: ReturnType<typeof getScriptConfigs> extends Map<string, infer V> ? V : never,
@@ -127,6 +154,10 @@ function buildConfiguredScriptPayload(
 
   const type = "service";
   const configuredPort = config.port ?? null;
+  if (config.url) {
+    return buildDeclaredUrlServicePayload(scriptName, config.url, configuredPort, runtimeEntry);
+  }
+
   const hostname = (
     serviceState ??
     ctx.serviceProxy.projectWorkspaceService({
@@ -237,7 +268,7 @@ export function buildWorkspaceScriptPayloads(
 
   for (const [scriptName, config] of scriptConfigs.entries()) {
     const runtimeEntry = runtimeEntries.get(scriptName) ?? null;
-    const serviceState = isServiceScript(config)
+    const serviceState = isProxiedServiceScript(config)
       ? projectWorkspaceServiceState({ workspaceId, scriptName, ctx })
       : null;
     payloads.push(
