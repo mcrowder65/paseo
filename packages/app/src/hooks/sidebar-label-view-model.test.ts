@@ -75,17 +75,18 @@ describe("buildLabelGroups", () => {
       ["urgent"],
       NAMES,
     );
-    expect(groups.map((group) => group.label)).toEqual(["Urgent", "Unlabelled"]);
+    expect(groups.map((group) => group.label)).toEqual(["Urgent", "Backend", "Unlabelled"]);
   });
 
-  it("ignores saved-order entries for labels nothing carries", () => {
+  it("shows a column for every catalog label, even one nothing carries", () => {
     const groups = buildLabelGroups(
       [ws({ workspaceKey: "b", labels: ["Backend"] })],
       LABELS,
       ["urgent", "backend"],
       NAMES,
     );
-    expect(groups.map((group) => group.label)).toEqual(["Backend"]);
+    expect(groups.map((group) => group.label)).toEqual(["Urgent", "Backend"]);
+    expect(groups[0]?.rows).toEqual([]);
   });
 
   it("collects workspaces with no real label into a trailing Unlabelled group", () => {
@@ -105,16 +106,6 @@ describe("buildLabelGroups", () => {
     expect(last?.rows.map((row) => row.workspaceKey)).toEqual(["blank", "none"]);
   });
 
-  it("drops labels nothing carries", () => {
-    const groups = buildLabelGroups(
-      [ws({ workspaceKey: "a", labels: ["Backend"] })],
-      LABELS,
-      [],
-      NAMES,
-    );
-    expect(groups.map((group) => group.label)).toEqual(["Backend"]);
-  });
-
   it("matches labels case-insensitively against the catalog", () => {
     const groups = buildLabelGroups(
       [ws({ workspaceKey: "a", labels: ["urgent"] })],
@@ -122,6 +113,7 @@ describe("buildLabelGroups", () => {
       [],
       NAMES,
     );
-    expect(groups.map((group) => group.label)).toEqual(["Urgent"]);
+    const urgent = groups.find((group) => group.label === "Urgent");
+    expect(urgent?.rows.map((row) => row.workspaceKey)).toEqual(["a"]);
   });
 });

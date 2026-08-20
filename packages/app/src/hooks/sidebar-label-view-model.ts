@@ -29,9 +29,11 @@ export function labelGroupKeyToLabelKey(groupKey: string): string | null {
 
 /**
  * Groups workspaces by their assigned labels. Labels are multi-valued, so a workspace carrying two
- * labels appears under both; one carrying none falls into the Unlabelled group. Empty groups are
- * dropped the way status grouping does — a defined label nothing carries is not a column, it is
- * noise.
+ * labels appears under both; one carrying none falls into the Unlabelled group.
+ *
+ * Every catalog label is a column, even one nothing carries yet — an empty column is where you
+ * drag work to, the way a board lays out. Unlabelled is the exception: it stands for no definition,
+ * so it only appears when something is actually unlabelled.
  *
  * Column order follows the user's saved `order` (label keys) first, then any remaining labels in
  * catalog order, so a freshly created label lands at the end rather than jumping the board. The
@@ -66,9 +68,8 @@ export function buildLabelGroups(
   const labelGroupsByKey = new Map<string, LabelGroup>();
   for (const definition of labelDefinitions) {
     const key = workspaceLabelKey(definition.name);
-    const rows = rowsByKey.get(key);
-    if (!rows || rows.length === 0) continue;
     if (labelGroupsByKey.has(key)) continue;
+    const rows = rowsByKey.get(key) ?? [];
     rows.sort((a, b) => compareLabelRows(a, b, projectNamesByViewKey));
     labelGroupsByKey.set(key, {
       key: `${LABEL_GROUP_KEY_PREFIX}${key}`,
