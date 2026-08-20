@@ -6,6 +6,7 @@ import { MAX_EXPLICIT_AGENT_TITLE_CHARS } from "./agent-title-limits.js";
 import { AgentProviderSchema } from "./provider-manifest.js";
 import { TOOL_CALL_ICON_NAMES } from "./agent-types.js";
 import { WORKSPACE_LABEL_COLORS } from "./workspace-labels.js";
+import { WORKSPACE_MANUAL_STATUSES } from "./workspace-status.js";
 import {
   ChatCreateRequestSchema,
   ChatListRequestSchema,
@@ -985,6 +986,16 @@ export const WorkspacePinSetRequestSchema = z.object({
   requestId: z.string(),
 });
 
+export const WorkspaceManualStatusSchema = z.enum(WORKSPACE_MANUAL_STATUSES);
+
+export const WorkspaceStatusSetRequestSchema = z.object({
+  type: z.literal("workspace.status.set.request"),
+  workspaceId: z.string(),
+  // Null clears the manual status and reverts the row to its derived activity bucket.
+  status: WorkspaceManualStatusSchema.nullable(),
+  requestId: z.string(),
+});
+
 export const WorkspaceLabelColorSchema = z.enum(WORKSPACE_LABEL_COLORS);
 export const WorkspaceLabelDefinitionSchema = z.object({
   name: z.string(),
@@ -1943,6 +1954,19 @@ export const WorkspacePinSetResponsePayloadSchema = z.object({
 export const WorkspacePinSetResponseSchema = z.object({
   type: z.literal("workspace.pin.set.response"),
   payload: WorkspacePinSetResponsePayloadSchema,
+});
+
+export const WorkspaceStatusSetResponsePayloadSchema = z.object({
+  requestId: z.string(),
+  workspaceId: z.string(),
+  accepted: z.boolean(),
+  status: WorkspaceManualStatusSchema.nullable(),
+  error: z.string().nullable(),
+});
+
+export const WorkspaceStatusSetResponseSchema = z.object({
+  type: z.literal("workspace.status.set.response"),
+  payload: WorkspaceStatusSetResponsePayloadSchema,
 });
 
 export const WorkspaceRecoveryStateSchema = z.discriminatedUnion("kind", [
@@ -2960,6 +2984,7 @@ export const SessionInboundMessageSchema = z.discriminatedUnion("type", [
   ProjectRemoveRequestSchema,
   WorkspaceTitleSetRequestSchema,
   WorkspacePinSetRequestSchema,
+  WorkspaceStatusSetRequestSchema,
   WorkspaceLabelListRequestSchema,
   WorkspaceLabelAssignmentSetRequestSchema,
   WorkspaceLabelUpdateRequestSchema,
@@ -3370,6 +3395,8 @@ export const ServerInfoStatusPayloadSchema = z
         providerSubagents: z.boolean().optional(),
         // COMPAT(workspacePinning): added in v0.1.107, remove gate after 2027-01-12.
         workspacePinning: z.boolean().optional(),
+        // COMPAT(workspaceManualStatus): added in v0.5.0, remove gate after 2027-08-19.
+        workspaceManualStatus: z.boolean().optional(),
         // COMPAT(hubRelationship): added in v0.1.X, drop the gate when floor >= v0.1.X.
         hubRelationship: z.boolean().optional(),
         // COMPAT(projectGithubClone): added in v0.1.108, remove gate after 2027-01-15.
@@ -3711,6 +3738,10 @@ export const WorkspaceDescriptorPayloadSchema = z
     pinnedAt: z.string().nullable().optional(),
     // COMPAT(workspaceLabels): added in v0.5.0, remove optional after 2027-08-14.
     labels: z.array(z.string()).optional(),
+    // COMPAT(workspaceManualStatus): added in v0.5.0, remove optional after 2027-08-19.
+    // The user-assigned Conductor-style status. Absent/null means no manual status; the
+    // client falls back to the derived activity bucket in `status`.
+    manualStatus: WorkspaceManualStatusSchema.nullable().optional(),
     archivingAt: z.string().nullable().optional().default(null),
     status: WorkspaceStateBucketSchema,
     // Best-effort workspace status entry timestamp. Old daemons omit the
@@ -6255,6 +6286,7 @@ export const SessionOutboundMessageSchema = z.discriminatedUnion("type", [
   ProjectRemoveResponseSchema,
   WorkspaceTitleSetResponseSchema,
   WorkspacePinSetResponseSchema,
+  WorkspaceStatusSetResponseSchema,
   WorkspaceRecoveryInspectResponseSchema,
   WorkspaceRecoveryRestoreResponseSchema,
   WaitForFinishResponseMessageSchema,
@@ -6454,6 +6486,10 @@ export type WorkspaceTitleSetResponsePayload = z.infer<
 >;
 export type WorkspacePinSetResponse = z.infer<typeof WorkspacePinSetResponseSchema>;
 export type WorkspacePinSetResponsePayload = z.infer<typeof WorkspacePinSetResponsePayloadSchema>;
+export type WorkspaceStatusSetResponse = z.infer<typeof WorkspaceStatusSetResponseSchema>;
+export type WorkspaceStatusSetResponsePayload = z.infer<
+  typeof WorkspaceStatusSetResponsePayloadSchema
+>;
 export type WorkspaceRecoveryState = z.infer<typeof WorkspaceRecoveryStateSchema>;
 export type WorkspaceRecoveryInspectResponse = z.infer<
   typeof WorkspaceRecoveryInspectResponseSchema
@@ -6600,6 +6636,8 @@ export type ProjectIconSetRequest = z.infer<typeof ProjectIconSetRequestSchema>;
 export type ProjectRemoveRequest = z.infer<typeof ProjectRemoveRequestSchema>;
 export type WorkspaceTitleSetRequest = z.infer<typeof WorkspaceTitleSetRequestSchema>;
 export type WorkspacePinSetRequest = z.infer<typeof WorkspacePinSetRequestSchema>;
+export type WorkspaceStatusSetRequest = z.infer<typeof WorkspaceStatusSetRequestSchema>;
+export type WorkspaceManualStatus = z.infer<typeof WorkspaceManualStatusSchema>;
 export type WorkspaceRecoveryInspectRequest = z.infer<typeof WorkspaceRecoveryInspectRequestSchema>;
 export type WorkspaceRecoveryRestoreRequest = z.infer<typeof WorkspaceRecoveryRestoreRequestSchema>;
 export type SetAgentModeRequestMessage = z.infer<typeof SetAgentModeRequestMessageSchema>;

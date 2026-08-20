@@ -1,4 +1,5 @@
 import { buildStatusGroups } from "@/hooks/sidebar-status-view-model";
+import { buildBoardGroups } from "@/hooks/sidebar-board-view-model";
 import {
   splitPinnedSidebarGroups,
   type PinnedSidebarGroups,
@@ -18,7 +19,11 @@ import {
   type SidebarShortcutModel,
   type SidebarShortcutSection,
 } from "@/utils/sidebar-shortcuts";
-import { statusWorkspaceGroups, type SidebarWorkspaceGroup } from "./sidebar-labels";
+import {
+  boardWorkspaceGroups,
+  statusWorkspaceGroups,
+  type SidebarWorkspaceGroup,
+} from "./sidebar-labels";
 
 export interface SidebarProjection {
   pinnedGroups: PinnedSidebarGroups;
@@ -101,6 +106,10 @@ function buildWorkspaceGroups(
     case "status":
       return statusWorkspaceGroups(
         buildStatusGroups(unpinnedWorkspaces, input.projectNamesByViewKey),
+      );
+    case "board":
+      return boardWorkspaceGroups(
+        buildBoardGroups(unpinnedWorkspaces, input.projectNamesByViewKey),
       );
   }
 }

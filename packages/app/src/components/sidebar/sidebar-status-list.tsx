@@ -39,6 +39,7 @@ import {
   CircleDot,
   CircleX,
 } from "lucide-react-native";
+import { WorkspaceStatusGlyph } from "@/workspace-status/status-glyph";
 import { useToast } from "@/contexts/toast-context";
 import { useMutation } from "@tanstack/react-query";
 import { getHostRuntimeStore } from "@/runtime/host-runtime";
@@ -468,7 +469,11 @@ function StatusGroupLeadingVisual({
   showChevron: boolean;
 }) {
   if (!showChevron) {
-    return <StatusGroupIcon bucket={leading.bucket} />;
+    return leading.kind === "manual-status" ? (
+      <WorkspaceStatusGlyph status={leading.status} />
+    ) : (
+      <StatusGroupIcon bucket={leading.bucket} />
+    );
   }
   if (collapsed) {
     return <ThemedChevronRight size={14} uniProps={foregroundMutedColorMapping} />;
@@ -1011,6 +1016,7 @@ function StatusWorkspaceActionSlot({
             serverId={workspace.serverId}
             workspaceId={workspace.workspaceId}
             workspaceLabels={workspace.labels}
+            workspaceManualStatus={workspace.manualStatus}
             onCopyPath={onCopyPath}
             onCopyBranchName={onCopyBranchName}
             onRename={onRename}

@@ -15,6 +15,7 @@ import {
   CircleCheck,
   CircleDashed,
   Clock,
+  Columns3,
   Diff,
   EyeOff,
   Folder,
@@ -83,6 +84,7 @@ type OptionIcon = ComponentType<{
 const GROUPING_ICONS: Record<SidebarGroupMode, OptionIcon> = {
   project: withUnistyles(Folder),
   status: withUnistyles(CircleDashed),
+  board: withUnistyles(Columns3),
 };
 
 const TITLE_SOURCE_ICONS: Record<WorkspaceTitleSource, OptionIcon> = {
@@ -114,13 +116,14 @@ const TRAILING_ICONS: Record<SidebarTrailingChoice, OptionIcon> = {
   timestamp: withUnistyles(Clock),
 };
 
-const GROUPING_MODES: readonly SidebarGroupMode[] = ["project", "status"];
+const GROUPING_MODES: readonly SidebarGroupMode[] = ["project", "status", "board"];
 const TITLE_SOURCES: readonly WorkspaceTitleSource[] = ["title", "branch"];
 const TRAILING_CHOICES: readonly SidebarTrailingChoice[] = ["diff", "timestamp"];
 
 const GROUPING_LABEL_KEYS: Record<SidebarGroupMode, string> = {
   project: "sidebar.display.grouping.project",
   status: "sidebar.display.grouping.status",
+  board: "sidebar.display.grouping.board",
 };
 
 const TITLE_SOURCE_LABEL_KEYS: Record<WorkspaceTitleSource, string> = {

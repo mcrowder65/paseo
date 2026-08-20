@@ -43,6 +43,8 @@ export interface SidebarWorkspaceEntry extends SidebarStatusWorkspacePlacement {
   title: string | null;
   pinnedAt?: string | null;
   labels?: string[];
+  // User-assigned Conductor-style status. Null means the board falls back to `statusBucket`.
+  manualStatus: WorkspaceDescriptor["manualStatus"];
   // Checkout branch (null when not a git checkout or detached HEAD).
   currentBranch: string | null;
   archivingAt: string | null;
@@ -168,6 +170,7 @@ export function createSidebarWorkspaceEntry(input: {
     title: input.workspace.title ?? null,
     pinnedAt: input.workspace.pinnedAt,
     labels: input.workspace.labels ?? EMPTY_WORKSPACE_LABELS,
+    manualStatus: input.workspace.manualStatus ?? null,
     currentBranch: normalizeCurrentBranch(input.workspace.gitRuntime?.currentBranch),
     statusBucket: effectiveStatus.status,
     statusEnteredAt: effectiveStatus.enteredAt,

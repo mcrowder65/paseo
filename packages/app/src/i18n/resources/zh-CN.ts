@@ -1004,6 +1004,7 @@ export const zhCN: TranslationResources = {
         label: "分组",
         project: "项目",
         status: "状态",
+        board: "看板",
         labels: "标签",
       },
       titleSource: {

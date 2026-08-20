@@ -119,6 +119,7 @@ export interface WorkspaceDescriptor {
   title?: string | null;
   pinnedAt?: string | null;
   labels?: string[];
+  manualStatus?: WorkspaceDescriptorPayload["manualStatus"];
   status: WorkspaceDescriptorPayload["status"];
   statusEnteredAt: Date | null;
   archivingAt: string | null;
@@ -157,6 +158,8 @@ export function normalizeWorkspaceDescriptor(
     pinnedAt: payload.pinnedAt ?? null,
     // COMPAT(workspaceLabels): old daemons omit assignments.
     labels: payload.labels ?? [],
+    // COMPAT(workspaceManualStatus): old daemons omit it; null means fall back to `status`.
+    manualStatus: payload.manualStatus ?? null,
     status: payload.status,
     statusEnteredAt,
     archivingAt: payload.archivingAt ?? null,

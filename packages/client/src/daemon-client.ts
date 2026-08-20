@@ -121,6 +121,7 @@ import type {
   AgentConfigApply,
   MutableDaemonConfig,
   MutableDaemonConfigPatch,
+  WorkspaceManualStatus,
 } from "@getpaseo/protocol/messages";
 import { isRelayClientWebSocketUrl } from "@getpaseo/protocol/daemon-endpoints";
 import { terminalSubscriptionKey } from "@getpaseo/protocol/terminal-subscription-key";
@@ -2711,6 +2712,26 @@ export class DaemonClient {
       throw new Error(payload.error ?? "setWorkspacePinned rejected");
     }
     return { pinnedAt: payload.pinnedAt };
+  }
+
+  async setWorkspaceStatus(
+    workspaceId: string,
+    status: WorkspaceManualStatus | null,
+    requestId?: string,
+  ): Promise<{ status: WorkspaceManualStatus | null }> {
+    const payload = await this.sendCorrelatedSessionRequest({
+      requestId,
+      message: {
+        type: "workspace.status.set.request",
+        workspaceId,
+        status,
+      },
+      responseType: "workspace.status.set.response",
+    });
+    if (!payload.accepted) {
+      throw new Error(payload.error ?? "setWorkspaceStatus rejected");
+    }
+    return { status: payload.status };
   }
 
   async inspectWorkspaceRecovery(
