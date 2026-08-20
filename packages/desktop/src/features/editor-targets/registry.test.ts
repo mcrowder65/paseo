@@ -4,6 +4,7 @@ import { listAvailableEditorTargets, openEditorTarget } from "./registry.js";
 import type { EditorTargetIcon, EditorTargetRuntime } from "./target.js";
 import { cursorTarget } from "./targets/cursor.js";
 import { explorerTarget, fileManagerTarget, finderTarget } from "./targets/file-manager.js";
+import { githubDesktopTarget } from "./targets/github-desktop.js";
 import { intellijIdeaTarget } from "./targets/intellij-idea.js";
 import { pycharmTarget } from "./targets/pycharm.js";
 import { vscodeTarget } from "./targets/vscode.js";
@@ -323,5 +324,57 @@ describe("editor target registry", () => {
 
     expect(macTargets.map((target) => target.id)).toEqual(["finder"]);
     expect(windowsTargets.map((target) => target.id)).toEqual(["explorer"]);
+  });
+
+  it("opens GitHub Desktop at the worktree via the Linux CLI when available", async () => {
+    const runtime = new FakeEditorTargets();
+    runtime.installCommand("github-desktop");
+    runtime.addPath("/repo");
+
+    expect(await githubDesktopTarget.describe(runtime)).toEqual({
+      id: "github-desktop",
+      label: "GitHub Desktop",
+      kind: "git-client",
+      icon: { kind: "image", dataUrl: "data:image/png;base64,github-desktop.png" },
+    });
+    expect(await githubDesktopTarget.isInstalled(runtime)).toBe(true);
+
+    await openEditorTarget({ editorId: "github-desktop", workspacePath: "/repo" }, runtime, [
+      githubDesktopTarget,
+    ]);
+
+    expect(runtime.launches).toEqual([{ command: "/bin/github-desktop", args: ["/repo"] }]);
+  });
+
+  it("detects GitHub Desktop's installed Windows executable when it is absent from PATH", async () => {
+    const runtime = new FakeEditorTargets("win32", {
+      LOCALAPPDATA: "C:/Users/me/AppData/Local",
+    });
+    const installedCommand = "C:/Users/me/AppData/Local/GitHubDesktop/GitHubDesktop.exe";
+    runtime.installCommand(installedCommand, installedCommand);
+    runtime.addPath("C:/repo");
+
+    expect(await githubDesktopTarget.isInstalled(runtime)).toBe(true);
+    await openEditorTarget({ editorId: "github-desktop", workspacePath: "C:/repo" }, runtime, [
+      githubDesktopTarget,
+    ]);
+
+    expect(runtime.launches).toEqual([{ command: installedCommand, args: ["C:/repo"] }]);
+  });
+
+  it("falls back to the macOS application when GitHub Desktop has no CLI", async () => {
+    const runtime = new FakeEditorTargets("darwin");
+    runtime.installMacApplication("GitHub Desktop");
+    runtime.addPath("/repo");
+
+    expect(await githubDesktopTarget.isInstalled(runtime)).toBe(true);
+
+    await openEditorTarget({ editorId: "github-desktop", workspacePath: "/repo" }, runtime, [
+      githubDesktopTarget,
+    ]);
+
+    expect(runtime.openedMacApplications).toEqual([
+      { applicationName: "GitHub Desktop", paths: ["/repo"] },
+    ]);
   });
 });
