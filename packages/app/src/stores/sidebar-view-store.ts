@@ -5,7 +5,7 @@ import { z } from "zod";
 import { workspaceLabelKey } from "@getpaseo/protocol/workspace-labels";
 import { createValidatedPersistStorage } from "@/storage/validated-persist-storage";
 
-export type SidebarGroupMode = "project" | "status";
+export type SidebarGroupMode = "project" | "status" | "label";
 
 const SIDEBAR_VIEW_STORAGE_KEY = "sidebar-view";
 const LEGACY_SIDEBAR_GROUP_MODE_STORAGE_KEY = "sidebar-group-mode";
@@ -54,7 +54,7 @@ interface SidebarViewPersistedState {
   labelFilter: SidebarLabelFilter;
 }
 
-const PersistedSidebarGroupModeSchema = z.enum(["project", "status", "label"]);
+const PersistedSidebarGroupModeSchema = z.enum(["project", "status", "board", "label"]);
 const SidebarLabelFilterSchema = z.object({
   labels: z.array(z.string()),
 });
@@ -105,7 +105,7 @@ export function migrateSidebarViewState(persistedState: unknown): SidebarViewPer
   }
 
   return {
-    groupMode: state.groupMode === "status" ? "status" : "project",
+    groupMode: resolvePersistedGroupMode(state.groupMode),
     hostFilters: readHostFilters(state),
     labelFilter: state.labelFilter
       ? normalizeSidebarLabelFilter(state.labelFilter)
@@ -199,6 +199,13 @@ export const useSidebarViewStore = create<SidebarViewStoreState>()(
     },
   ),
 );
+
+// Every live mode passes through; anything else (or absent) falls back to project. "board" is a
+// retired mode still accepted from older persisted state; it folds back to project.
+function resolvePersistedGroupMode(mode: SidebarViewStorageState["groupMode"]): SidebarGroupMode {
+  if (mode === "status" || mode === "label") return mode;
+  return "project";
+}
 
 function emptyLabelFilter(): SidebarLabelFilter {
   return { labels: [] };

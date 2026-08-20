@@ -98,6 +98,7 @@ import { hasVisibleOrderChanged, mergeWithRemainder } from "@/utils/sidebar-reor
 import { confirmDialog } from "@/utils/confirm-dialog";
 import type { SidebarStateBucket } from "@/utils/sidebar-agent-state";
 import { SidebarStatusWorkspaceList } from "@/components/sidebar/sidebar-status-list";
+import { labelGroupKeyToLabelKey } from "@/hooks/sidebar-label-view-model";
 import type { SidebarWorkspaceGroup } from "@/components/sidebar/sidebar-labels";
 import {
   SidebarWorkspaceContextMenu,
@@ -1966,6 +1967,7 @@ export function SidebarWorkspaceList({
   const onToggleWorkspacePin = useSidebarWorkspacePinController();
   const getPinnedWorkspaceOrder = useSidebarOrderStore((state) => state.getPinnedWorkspaceOrder);
   const setPinnedWorkspaceOrder = useSidebarOrderStore((state) => state.setPinnedWorkspaceOrder);
+  const setLabelOrder = useSidebarOrderStore((state) => state.setLabelOrder);
   const hasActiveLabelFilter = useSidebarViewStore((state) =>
     hasActiveSidebarLabelFilter(state.labelFilter),
   );
@@ -1990,6 +1992,15 @@ export function SidebarWorkspaceList({
       );
     },
     [getPinnedWorkspaceOrder, setPinnedWorkspaceOrder],
+  );
+  const handleLabelGroupReorder = useCallback(
+    (reorderedGroups: SidebarWorkspaceGroup[]) => {
+      const keys = reorderedGroups
+        .map((group) => labelGroupKeyToLabelKey(group.key))
+        .filter((key): key is string => key !== null);
+      setLabelOrder(keys);
+    },
+    [setLabelOrder],
   );
   // One fetch, one map, every mode — project mode paints icons on its headers and status mode
   // paints them on each row, all keyed by `projectViewKey`. The targets come from the projection
@@ -2018,6 +2029,7 @@ export function SidebarWorkspaceList({
         supportsPinningByServerId={supportsPinningByServerId}
         onToggleWorkspacePin={onToggleWorkspacePin}
         onPinnedWorkspaceReorder={handlePinnedWorkspaceReorder}
+        onLabelGroupReorder={groupMode === "label" ? handleLabelGroupReorder : undefined}
         listHeaderComponent={listHeaderComponent}
         labelFilterEmpty={labelFilterEmpty}
         parentGestureRef={parentGestureRef}
@@ -2068,6 +2080,7 @@ function SidebarGroupedModeList({
   supportsPinningByServerId,
   onToggleWorkspacePin,
   onPinnedWorkspaceReorder,
+  onLabelGroupReorder,
   listHeaderComponent,
   labelFilterEmpty,
   parentGestureRef,
@@ -2083,6 +2096,7 @@ function SidebarGroupedModeList({
   supportsPinningByServerId: ReadonlyMap<string, boolean>;
   onToggleWorkspacePin: ToggleSidebarWorkspacePin;
   onPinnedWorkspaceReorder: (workspaces: SidebarWorkspacePlacement[]) => void;
+  onLabelGroupReorder?: (groups: SidebarWorkspaceGroup[]) => void;
   listHeaderComponent?: ReactElement | null;
   labelFilterEmpty: boolean;
   parentGestureRef?: MutableRefObject<GestureType | undefined>;
@@ -2110,6 +2124,7 @@ function SidebarGroupedModeList({
       supportsPinningByServerId={supportsPinningByServerId}
       onToggleWorkspacePin={onToggleWorkspacePin}
       onPinnedWorkspaceReorder={onPinnedWorkspaceReorder}
+      onLabelGroupReorder={onLabelGroupReorder}
       listHeaderComponent={listHeaderComponent}
       labelFilterEmpty={labelFilterEmpty}
       parentGestureRef={parentGestureRef}

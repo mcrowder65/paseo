@@ -8,12 +8,16 @@ interface SidebarOrderStoreState {
   projectOrder: string[];
   pinnedWorkspaceOrder: string[];
   workspaceOrderByProject: Record<string, string[]>;
+  // The board columns' order in label grouping, held as `workspaceLabelKey`s.
+  labelOrder: string[];
   getProjectOrder: () => string[];
   setProjectOrder: (keys: string[]) => void;
   getPinnedWorkspaceOrder: () => string[];
   setPinnedWorkspaceOrder: (keys: string[]) => void;
   getWorkspaceOrder: (projectViewKey: string) => string[];
   setWorkspaceOrder: (projectViewKey: string, keys: string[]) => void;
+  getLabelOrder: () => string[];
+  setLabelOrder: (keys: string[]) => void;
 }
 
 interface SidebarOrderPersistedState {
@@ -22,6 +26,7 @@ interface SidebarOrderPersistedState {
   workspaceOrderByProject?: Record<string, string[]>;
   projectOrderByServerId?: Record<string, string[]>;
   workspaceOrderByServerAndProject?: Record<string, string[]>;
+  labelOrder?: string[];
 }
 
 const StringArrayRecordSchema = z.record(z.string(), z.array(z.string()));
@@ -31,6 +36,7 @@ const SidebarOrderPersistedStateSchema = z.strictObject({
   workspaceOrderByProject: StringArrayRecordSchema.optional(),
   projectOrderByServerId: StringArrayRecordSchema.optional(),
   workspaceOrderByServerAndProject: StringArrayRecordSchema.optional(),
+  labelOrder: z.array(z.string()).optional(),
 });
 
 interface SidebarWorkspaceOrderScope {
@@ -86,10 +92,16 @@ export function migrateSidebarOrderState(persistedState: unknown): {
   projectOrder: string[];
   pinnedWorkspaceOrder: string[];
   workspaceOrderByProject: Record<string, string[]>;
+  labelOrder: string[];
 } {
   const result = SidebarOrderPersistedStateSchema.safeParse(persistedState);
   if (!result.success) {
-    return { projectOrder: [], pinnedWorkspaceOrder: [], workspaceOrderByProject: {} };
+    return {
+      projectOrder: [],
+      pinnedWorkspaceOrder: [],
+      workspaceOrderByProject: {},
+      labelOrder: [],
+    };
   }
   const state: SidebarOrderPersistedState = result.data;
 
@@ -123,6 +135,7 @@ export function migrateSidebarOrderState(persistedState: unknown): {
     projectOrder,
     pinnedWorkspaceOrder: normalizeKeys(state.pinnedWorkspaceOrder ?? []),
     workspaceOrderByProject,
+    labelOrder: normalizeKeys(state.labelOrder ?? []),
   };
 }
 
@@ -132,6 +145,7 @@ export const useSidebarOrderStore = create<SidebarOrderStoreState>()(
       projectOrder: [],
       pinnedWorkspaceOrder: [],
       workspaceOrderByProject: {},
+      labelOrder: [],
       getProjectOrder: () => get().projectOrder,
       setProjectOrder: (keys) => {
         const normalized = normalizeKeys(keys);
@@ -158,6 +172,10 @@ export const useSidebarOrderStore = create<SidebarOrderStoreState>()(
           },
         }));
       },
+      getLabelOrder: () => get().labelOrder,
+      setLabelOrder: (keys) => {
+        set({ labelOrder: normalizeKeys(keys) });
+      },
     }),
     {
       name: "sidebar-project-workspace-order",
@@ -166,6 +184,7 @@ export const useSidebarOrderStore = create<SidebarOrderStoreState>()(
         projectOrder: state.projectOrder,
         pinnedWorkspaceOrder: state.pinnedWorkspaceOrder,
         workspaceOrderByProject: state.workspaceOrderByProject,
+        labelOrder: state.labelOrder,
       }),
       version: 1,
       migrate: migrateSidebarOrderState,

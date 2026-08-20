@@ -1,13 +1,18 @@
-import { workspaceLabelKey } from "@getpaseo/protocol/workspace-labels";
+import { workspaceLabelKey, type WorkspaceLabelColor } from "@getpaseo/protocol/workspace-labels";
 import type { SidebarWorkspaceEntry } from "@/hooks/use-sidebar-workspaces-list";
 import { SIDEBAR_UNLABELLED_LABEL_KEY, type SidebarLabelFilter } from "@/stores/sidebar-view-store";
 import type { StatusBucket, StatusGroup } from "@/hooks/sidebar-status-view-model";
+import type { LabelGroup } from "@/hooks/sidebar-label-view-model";
+
+export type SidebarWorkspaceGroupLeading =
+  | { kind: "status"; bucket: StatusBucket }
+  | { kind: "label"; color: WorkspaceLabelColor | null };
 
 export interface SidebarWorkspaceGroup {
   key: string;
   label: string;
   rows: SidebarWorkspaceEntry[];
-  leading: { kind: "status"; bucket: StatusBucket };
+  leading: SidebarWorkspaceGroupLeading;
 }
 
 export function statusWorkspaceGroups(groups: readonly StatusGroup[]): SidebarWorkspaceGroup[] {
@@ -16,6 +21,15 @@ export function statusWorkspaceGroups(groups: readonly StatusGroup[]): SidebarWo
     label: group.label,
     rows: group.rows,
     leading: { kind: "status", bucket: group.bucket },
+  }));
+}
+
+export function labelWorkspaceGroups(groups: readonly LabelGroup[]): SidebarWorkspaceGroup[] {
+  return groups.map((group) => ({
+    key: group.key,
+    label: group.label,
+    rows: group.rows,
+    leading: { kind: "label", color: group.color },
   }));
 }
 
