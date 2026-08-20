@@ -966,7 +966,15 @@ function WorkspacesSectionHeader() {
   const { theme } = useUnistyles();
   const setCommandCenterOpen = useKeyboardShortcutsStore((state) => state.setCommandCenterOpen);
   const commandCenterKeys = useShortcutKeys("toggle-command-center");
+  const newWorkspaceKeys = useShortcutKeys("new-workspace");
   const handleSearchPress = useCallback(() => setCommandCenterOpen(true), [setCommandCenterOpen]);
+  const activeWorkspaceSelection = useActiveWorkspaceSelection();
+  const activeWorkspaceServerId = activeWorkspaceSelection?.serverId ?? null;
+  const handleNewWorkspacePress = useCallback(() => {
+    router.push(
+      buildNewWorkspaceRoute(activeWorkspaceServerId ? { serverId: activeWorkspaceServerId } : {}),
+    );
+  }, [activeWorkspaceServerId]);
   const searchButtonStyle = useCallback(
     ({ hovered = false, pressed }: PressableStateCallbackType & { hovered?: boolean }) => [
       styles.workspacesHeaderIconButton,
@@ -1010,6 +1018,29 @@ function WorkspacesSectionHeader() {
           </TooltipTrigger>
           <TooltipContent side="bottom" align="center" offset={8}>
             <IconTooltipContent label="Display preferences" />
+          </TooltipContent>
+        </Tooltip>
+        <Tooltip delayDuration={300}>
+          <TooltipTrigger asChild>
+            <Pressable
+              accessibilityRole="button"
+              accessibilityLabel="New workspace"
+              testID="sidebar-workspaces-header-new-workspace"
+              style={searchButtonStyle}
+              onPress={handleNewWorkspacePress}
+            >
+              {({ hovered, pressed }) => (
+                <Plus
+                  size={14}
+                  color={
+                    hovered || pressed ? theme.colors.foreground : theme.colors.foregroundMuted
+                  }
+                />
+              )}
+            </Pressable>
+          </TooltipTrigger>
+          <TooltipContent side="bottom" align="center" offset={8}>
+            <IconTooltipContent label="New workspace" shortcutKeys={newWorkspaceKeys} />
           </TooltipContent>
         </Tooltip>
       </View>
