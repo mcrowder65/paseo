@@ -20,6 +20,7 @@ describe("migrateSidebarOrderState", () => {
       workspaceOrderByProject: {
         "project-a": ["host-a:main", "host-a:feature", "host-b:main"],
       },
+      labelOrder: [],
     });
   });
 
@@ -29,5 +30,13 @@ describe("migrateSidebarOrderState", () => {
     });
 
     expect(migrated.pinnedWorkspaceOrder).toEqual(["host-a:one", "host-b:two"]);
+  });
+
+  it("normalizes label order, dropping blanks and duplicates", () => {
+    const migrated = migrateSidebarOrderState({
+      labelOrder: [" urgent ", "urgent", "", "backend"],
+    });
+
+    expect(migrated.labelOrder).toEqual(["urgent", "backend"]);
   });
 });

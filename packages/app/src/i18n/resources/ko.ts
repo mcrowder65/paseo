@@ -1019,7 +1019,6 @@ export const ko: TranslationResources = {
         label: "그룹화",
         project: "프로젝트",
         status: "상태",
-        board: "보드",
         labels: "레이블",
       },
       titleSource: {

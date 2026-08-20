@@ -21,7 +21,6 @@ import {
   type ProjectPlacementPayload,
   type WorkspaceSetupSnapshot,
   type WorkspaceDescriptorPayload,
-  type WorkspaceManualStatus,
 } from "./messages.js";
 import type {
   TerminalManager,
@@ -2434,8 +2433,6 @@ export class Session {
         return this.handleWorkspaceTitleSetRequest(msg.workspaceId, msg.title, msg.requestId);
       case "workspace.pin.set.request":
         return this.handleWorkspacePinSetRequest(msg.workspaceId, msg.pinned, msg.requestId);
-      case "workspace.status.set.request":
-        return this.handleWorkspaceStatusSetRequest(msg.workspaceId, msg.status, msg.requestId);
       default:
         return undefined;
     }
@@ -3295,55 +3292,6 @@ export class Session {
         },
       });
       emitResponse(false, null, getErrorMessageOr(error, "Failed to pin workspace"));
-    }
-  }
-
-  private async handleWorkspaceStatusSetRequest(
-    workspaceId: string,
-    status: WorkspaceManualStatus | null,
-    requestId: string,
-  ): Promise<void> {
-    const logContext = { workspaceId, status, requestId };
-    this.sessionLogger.info(logContext, "session: workspace.status.set.request");
-    const emitResponse = (
-      accepted: boolean,
-      nextStatus: WorkspaceManualStatus | null,
-      error: string | null,
-    ) => {
-      this.emit({
-        type: "workspace.status.set.response",
-        payload: { requestId, workspaceId, accepted, status: nextStatus, error },
-      });
-    };
-
-    try {
-      const updatedAt = new Date().toISOString();
-      const updated = await this.workspaceRegistry.update(workspaceId, (existing) => ({
-        ...existing,
-        manualStatus: status,
-        updatedAt,
-      }));
-      if (!updated) {
-        emitResponse(false, null, "Workspace not found");
-        return;
-      }
-      emitResponse(true, status, null);
-      await this.emitWorkspaceUpdatesForWorkspaceIds([workspaceId]);
-    } catch (error) {
-      this.sessionLogger.error(
-        { ...logContext, err: error },
-        "session: workspace.status.set.request error",
-      );
-      this.emit({
-        type: "activity_log",
-        payload: {
-          id: uuidv4(),
-          timestamp: new Date(),
-          type: "error",
-          content: `Failed to set workspace status: ${getErrorMessage(error)}`,
-        },
-      });
-      emitResponse(false, null, getErrorMessageOr(error, "Failed to set workspace status"));
     }
   }
 
@@ -4786,7 +4734,6 @@ export class Session {
       title: workspace.title,
       pinnedAt: workspace.pinnedAt,
       ...(workspace.labels && workspace.labels.length > 0 ? { labels: workspace.labels } : {}),
-      manualStatus: workspace.manualStatus,
       archivingAt: null,
       status: "done",
       statusEnteredAt: null,
@@ -4881,7 +4828,6 @@ export class Session {
       ...(result.workspace.labels && result.workspace.labels.length > 0
         ? { labels: result.workspace.labels }
         : {}),
-      manualStatus: result.workspace.manualStatus,
       archivingAt: null,
       status: "done",
       statusEnteredAt: result.workspace.createdAt,

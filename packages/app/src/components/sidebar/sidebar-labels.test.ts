@@ -25,7 +25,6 @@ function workspace(
     labels,
     currentBranch: "main",
     statusBucket: "done",
-    manualStatus: null,
     statusEnteredAt: null,
     archivingAt: null,
     diffStat: null,

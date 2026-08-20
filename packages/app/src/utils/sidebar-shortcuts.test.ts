@@ -34,7 +34,6 @@ function workspace(input: {
     title: null,
     currentBranch: null,
     statusBucket: input.statusBucket ?? "done",
-    manualStatus: null,
     archivingAt: null,
     statusEnteredAt: input.statusEnteredAt ?? null,
     diffStat: null,

@@ -1037,7 +1037,6 @@ export const ptBR: TranslationResources = {
         label: "Agrupamento",
         project: "Projeto",
         status: "Status",
-        board: "Quadro",
         labels: "Etiquetas",
       },
       titleSource: {

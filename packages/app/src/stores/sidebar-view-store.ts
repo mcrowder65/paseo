@@ -5,7 +5,7 @@ import { z } from "zod";
 import { workspaceLabelKey } from "@getpaseo/protocol/workspace-labels";
 import { createValidatedPersistStorage } from "@/storage/validated-persist-storage";
 
-export type SidebarGroupMode = "project" | "status" | "board";
+export type SidebarGroupMode = "project" | "status" | "label";
 
 const SIDEBAR_VIEW_STORAGE_KEY = "sidebar-view";
 const LEGACY_SIDEBAR_GROUP_MODE_STORAGE_KEY = "sidebar-group-mode";
@@ -200,10 +200,10 @@ export const useSidebarViewStore = create<SidebarViewStoreState>()(
   ),
 );
 
-// "label" is a legacy persisted grouping value that never became a real mode; fold it back to
-// project. Everything else that is a live mode passes through.
+// Every live mode passes through; anything else (or absent) falls back to project. "board" is a
+// retired mode still accepted from older persisted state; it folds back to project.
 function resolvePersistedGroupMode(mode: SidebarViewStorageState["groupMode"]): SidebarGroupMode {
-  if (mode === "status" || mode === "board") return mode;
+  if (mode === "status" || mode === "label") return mode;
   return "project";
 }
 

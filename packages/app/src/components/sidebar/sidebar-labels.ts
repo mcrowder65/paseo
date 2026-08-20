@@ -1,13 +1,12 @@
-import { workspaceLabelKey } from "@getpaseo/protocol/workspace-labels";
-import type { WorkspaceManualStatus } from "@getpaseo/protocol/workspace-status";
+import { workspaceLabelKey, type WorkspaceLabelColor } from "@getpaseo/protocol/workspace-labels";
 import type { SidebarWorkspaceEntry } from "@/hooks/use-sidebar-workspaces-list";
 import { SIDEBAR_UNLABELLED_LABEL_KEY, type SidebarLabelFilter } from "@/stores/sidebar-view-store";
 import type { StatusBucket, StatusGroup } from "@/hooks/sidebar-status-view-model";
-import type { BoardGroup } from "@/hooks/sidebar-board-view-model";
+import type { LabelGroup } from "@/hooks/sidebar-label-view-model";
 
 export type SidebarWorkspaceGroupLeading =
   | { kind: "status"; bucket: StatusBucket }
-  | { kind: "manual-status"; status: WorkspaceManualStatus };
+  | { kind: "label"; color: WorkspaceLabelColor | null };
 
 export interface SidebarWorkspaceGroup {
   key: string;
@@ -25,12 +24,12 @@ export function statusWorkspaceGroups(groups: readonly StatusGroup[]): SidebarWo
   }));
 }
 
-export function boardWorkspaceGroups(groups: readonly BoardGroup[]): SidebarWorkspaceGroup[] {
+export function labelWorkspaceGroups(groups: readonly LabelGroup[]): SidebarWorkspaceGroup[] {
   return groups.map((group) => ({
-    key: `board:${group.status}`,
+    key: group.key,
     label: group.label,
     rows: group.rows,
-    leading: { kind: "manual-status", status: group.status },
+    leading: { kind: "label", color: group.color },
   }));
 }
 

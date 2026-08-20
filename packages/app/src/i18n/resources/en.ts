@@ -1021,7 +1021,6 @@ export const en = {
         label: "Grouping",
         project: "Project",
         status: "Status",
-        board: "Board",
         labels: "Labels",
       },
       titleSource: {

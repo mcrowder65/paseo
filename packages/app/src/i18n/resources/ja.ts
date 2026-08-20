@@ -1024,7 +1024,6 @@ export const ja: TranslationResources = {
         label: "グループ化",
         project: "プロジェクト",
         status: "ステータス",
-        board: "ボード",
         labels: "ラベル",
       },
       titleSource: {

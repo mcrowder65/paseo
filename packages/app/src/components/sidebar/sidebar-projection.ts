@@ -1,5 +1,6 @@
+import type { WorkspaceLabelDefinition } from "@getpaseo/protocol/workspace-labels";
 import { buildStatusGroups } from "@/hooks/sidebar-status-view-model";
-import { buildBoardGroups } from "@/hooks/sidebar-board-view-model";
+import { buildLabelGroups } from "@/hooks/sidebar-label-view-model";
 import {
   splitPinnedSidebarGroups,
   type PinnedSidebarGroups,
@@ -20,7 +21,7 @@ import {
   type SidebarShortcutSection,
 } from "@/utils/sidebar-shortcuts";
 import {
-  boardWorkspaceGroups,
+  labelWorkspaceGroups,
   statusWorkspaceGroups,
   type SidebarWorkspaceGroup,
 } from "./sidebar-labels";
@@ -47,6 +48,8 @@ export interface SidebarProjectionInput {
   workspaceEntriesByKey: ReadonlyMap<string, SidebarWorkspaceEntry>;
   projectNamesByViewKey: Map<string, string>;
   groupMode: SidebarGroupMode;
+  labelDefinitions: readonly WorkspaceLabelDefinition[];
+  labelOrder: readonly string[];
   pinnedCollapsed: boolean;
   collapsedProjectKeys: ReadonlySet<string>;
   collapsedWorkspaceGroupKeys: ReadonlySet<string>;
@@ -107,9 +110,14 @@ function buildWorkspaceGroups(
       return statusWorkspaceGroups(
         buildStatusGroups(unpinnedWorkspaces, input.projectNamesByViewKey),
       );
-    case "board":
-      return boardWorkspaceGroups(
-        buildBoardGroups(unpinnedWorkspaces, input.projectNamesByViewKey),
+    case "label":
+      return labelWorkspaceGroups(
+        buildLabelGroups(
+          unpinnedWorkspaces,
+          input.labelDefinitions,
+          input.labelOrder,
+          input.projectNamesByViewKey,
+        ),
       );
   }
 }

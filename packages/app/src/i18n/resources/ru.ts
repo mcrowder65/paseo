@@ -1035,7 +1035,6 @@ export const ru: TranslationResources = {
         label: "Группировка",
         project: "Проект",
         status: "Статус",
-        board: "Доска",
         labels: "Метки",
       },
       titleSource: {

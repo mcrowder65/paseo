@@ -1046,7 +1046,6 @@ export const es: TranslationResources = {
         label: "Agrupación",
         project: "Proyecto",
         status: "Estado",
-        board: "Tablero",
         labels: "Etiquetas",
       },
       titleSource: {

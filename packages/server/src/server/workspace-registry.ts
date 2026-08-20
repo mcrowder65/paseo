@@ -3,10 +3,6 @@ import { promises as fs } from "node:fs";
 import type { Logger } from "pino";
 import { z } from "zod";
 
-import {
-  WorkspaceManualStatusSchema,
-  type WorkspaceManualStatus,
-} from "@getpaseo/protocol/messages";
 import { writeJsonFileAtomic } from "./atomic-file.js";
 import { areEquivalentPaths } from "../utils/path.js";
 import {
@@ -97,11 +93,6 @@ const PersistedWorkspaceRecordSchema = z.object({
     .optional()
     .transform((value) => value ?? null),
   labels: z.array(z.string()).optional(),
-  // User-assigned Conductor-style status. Reconciliation never touches it. Null means the
-  // sidebar falls back to the derived activity bucket.
-  manualStatus: WorkspaceManualStatusSchema.nullable()
-    .optional()
-    .transform((value) => value ?? null),
 });
 
 export type PersistedProjectRecord = z.infer<typeof PersistedProjectRecordSchema>;
@@ -683,7 +674,6 @@ export function createPersistedWorkspaceRecord(input: {
   autoArchivedChangeRequestUrl?: string | null;
   pinnedAt?: string | null;
   labels?: string[];
-  manualStatus?: WorkspaceManualStatus | null;
 }): PersistedWorkspaceRecord {
   return PersistedWorkspaceRecordSchema.parse({
     ...input,
@@ -696,7 +686,6 @@ export function createPersistedWorkspaceRecord(input: {
     archivedAt: input.archivedAt ?? null,
     autoArchivedChangeRequestUrl: input.autoArchivedChangeRequestUrl ?? null,
     pinnedAt: input.pinnedAt ?? null,
-    manualStatus: input.manualStatus ?? null,
   });
 }
 
