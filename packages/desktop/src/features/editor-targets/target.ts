@@ -1,4 +1,4 @@
-export type EditorTargetKind = "editor" | "file-manager";
+export type EditorTargetKind = "editor" | "file-manager" | "git-client";
 
 export type EditorTargetIcon =
   | { kind: "image"; dataUrl: string }
