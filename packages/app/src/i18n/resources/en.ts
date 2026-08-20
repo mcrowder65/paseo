@@ -750,6 +750,11 @@ export const en = {
           pending: "Updating...",
           success: "Updated",
         },
+        rebaseFromBase: {
+          label: "Rebase onto {{baseRef}}",
+          pending: "Rebasing...",
+          success: "Rebased",
+        },
         archive: {
           label: "Archive workspace",
           pending: "Archiving...",
@@ -811,6 +816,11 @@ export const en = {
             "Update isn't available while you have local changes so commit or stash them first",
           updateCurrent:
             "Update isn't available because this branch is already up to date with {{baseRef}}",
+          rebaseNoBase: "Rebase isn't available because we couldn't determine the base branch",
+          rebaseDirty:
+            "Rebase isn't available while you have local changes so commit or stash them first",
+          rebaseCurrent:
+            "Rebase isn't available because this branch is already up to date with {{baseRef}}",
           mergePrNoGithub: "Merge PR isn't available right now because GitHub isn't connected",
           archiveNotWorktree:
             "Archive isn't available here because this workspace was not created as a Paseo worktree",
@@ -838,6 +848,7 @@ export const en = {
           baseRefUnavailable: "Base ref unavailable",
           failedMerge: "Failed to merge",
           failedMergeFromBase: "Failed to merge from base",
+          failedRebaseFromBase: "Failed to rebase onto base",
         },
         archiveWarning: {
           title: 'Archive "{{workspaceName}}"?',

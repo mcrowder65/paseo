@@ -754,6 +754,11 @@ export const ko: TranslationResources = {
           pending: "업데이트하는 중...",
           success: "업데이트됨",
         },
+        rebaseFromBase: {
+          label: "{{baseRef}}에 리베이스",
+          pending: "리베이스하는 중...",
+          success: "리베이스됨",
+        },
         archive: {
           label: "워크스페이스 보관",
           pending: "보관하는 중...",
@@ -809,6 +814,11 @@ export const ko: TranslationResources = {
             "로컬 변경 사항이 있어 업데이트를 사용할 수 없습니다. 먼저 커밋하거나 스태시하세요",
           updateCurrent:
             "이 브랜치가 이미 {{baseRef}}와 최신 상태이므로 업데이트를 사용할 수 없습니다",
+          rebaseNoBase: "기준 브랜치를 확인할 수 없어 리베이스를 사용할 수 없습니다",
+          rebaseDirty:
+            "로컬 변경 사항이 있는 동안에는 리베이스를 사용할 수 없으므로 먼저 커밋하거나 스태시하세요",
+          rebaseCurrent:
+            "이 브랜치가 이미 {{baseRef}}와 최신 상태이므로 리베이스를 사용할 수 없습니다",
           mergePrNoGithub: "GitHub가 연결되어 있지 않아 지금은 PR 병합을 사용할 수 없습니다",
           archiveNotWorktree:
             "이 워크스페이스가 Paseo 워크트리로 생성되지 않아 여기서 보관을 사용할 수 없습니다",
@@ -836,6 +846,7 @@ export const ko: TranslationResources = {
           baseRefUnavailable: "기준 ref를 사용할 수 없습니다",
           failedMerge: "병합하지 못했습니다",
           failedMergeFromBase: "기준에서 병합하지 못했습니다",
+          failedRebaseFromBase: "기준으로 리베이스하지 못했습니다",
         },
         archiveWarning: {
           title: '"{{workspaceName}}"를 보관하시겠습니까?',

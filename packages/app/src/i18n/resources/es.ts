@@ -759,6 +759,11 @@ export const es: TranslationResources = {
           pending: "Actualizando...",
           success: "Actualizado",
         },
+        rebaseFromBase: {
+          label: "Hacer rebase sobre {{baseRef}}",
+          pending: "Haciendo rebase...",
+          success: "Rebaseado",
+        },
         archive: {
           label: "Archivar espacio de trabajo",
           pending: "Archivando...",
@@ -825,6 +830,11 @@ export const es: TranslationResources = {
             "La actualización no está disponible mientras tenga cambios locales, así que confírmelos o guárdelos primero",
           updateCurrent:
             "La actualización no está disponible porque esta rama ya está actualizada con{{baseRef}}",
+          rebaseNoBase: "El rebase no está disponible porque no se pudo determinar la rama base",
+          rebaseDirty:
+            "El rebase no está disponible mientras tengas cambios locales, así que confírmalos o guárdalos en stash primero",
+          rebaseCurrent:
+            "El rebase no está disponible porque esta rama ya está actualizada con {{baseRef}}",
           mergePrNoGithub:
             "FusionarPRno está disponible en este momento porqueGitHubno está conectado",
           archiveNotWorktree:
@@ -860,6 +870,7 @@ export const es: TranslationResources = {
           baseRefUnavailable: "Referencia base no disponible",
           failedMerge: "No se pudo fusionar",
           failedMergeFromBase: "No se pudo fusionar desde la base",
+          failedRebaseFromBase: "No se pudo hacer rebase sobre la base",
         },
         archiveWarning: {
           title: '¿Archivo "{{workspaceName}}"?',

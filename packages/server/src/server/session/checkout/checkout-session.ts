@@ -821,6 +821,7 @@ export class CheckoutSession {
       await mergeFromBase(cwd, {
         baseRef: msg.baseRef,
         requireCleanTarget: msg.requireCleanTarget ?? true,
+        strategy: msg.strategy,
       });
       await this.gitMutation.notifyGitMutation(cwd, "merge-from-base", { invalidateForge: true });
       this.scheduleDiffRefresh(cwd);

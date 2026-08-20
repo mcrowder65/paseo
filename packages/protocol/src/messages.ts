@@ -2054,11 +2054,14 @@ export const CheckoutMergeRequestSchema = z.object({
   requestId: z.string(),
 });
 
+export const UpdateFromBaseStrategySchema = z.enum(["merge", "rebase"]);
+
 export const CheckoutMergeFromBaseRequestSchema = z.object({
   type: z.literal("checkout_merge_from_base_request"),
   cwd: z.string(),
   baseRef: z.string().optional(),
   requireCleanTarget: z.boolean().optional(),
+  strategy: UpdateFromBaseStrategySchema.optional(),
   requestId: z.string(),
 });
 
@@ -3340,6 +3343,8 @@ export const ServerInfoStatusPayloadSchema = z
         agentHistorySearch: z.boolean().optional(),
         // COMPAT(checkoutRefresh): added in v0.1.86, remove gate after 2026-11-29.
         checkoutRefresh: z.boolean().optional(),
+        // COMPAT(checkoutRebaseFromBase): added in v0.5.0, remove gate after 2027-08-19.
+        checkoutRebaseFromBase: z.boolean().optional(),
         // COMPAT(workspaceMultiplicity): added in v0.1.97, drop the gate when floor >= v0.1.97
         workspaceMultiplicity: z.boolean().optional(),
         // COMPAT(projectRemove): added in v0.1.97, drop the gate when floor >= v0.1.97.
@@ -6620,6 +6625,7 @@ export type CheckoutCommitRequest = z.infer<typeof CheckoutCommitRequestSchema>;
 export type CheckoutCommitResponse = z.infer<typeof CheckoutCommitResponseSchema>;
 export type CheckoutMergeRequest = z.infer<typeof CheckoutMergeRequestSchema>;
 export type CheckoutMergeResponse = z.infer<typeof CheckoutMergeResponseSchema>;
+export type UpdateFromBaseStrategy = z.infer<typeof UpdateFromBaseStrategySchema>;
 export type CheckoutMergeFromBaseRequest = z.infer<typeof CheckoutMergeFromBaseRequestSchema>;
 export type CheckoutMergeFromBaseResponse = z.infer<typeof CheckoutMergeFromBaseResponseSchema>;
 export type CheckoutPullRequest = z.infer<typeof CheckoutPullRequestSchema>;

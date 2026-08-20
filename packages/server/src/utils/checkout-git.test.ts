@@ -1880,6 +1880,141 @@ const x = 1;
     ).toThrow();
   });
 
+  it("rebases the feature branch onto base without a merge commit", async () => {
+    // Diverge: advance main after cutting feature so a plain merge would create a merge commit.
+    execFileSync("git", ["checkout", "-b", "feature"], { cwd: repoDir });
+    writeFileSync(join(repoDir, "feature.txt"), "feature\n");
+    execFileSync("git", ["add", "feature.txt"], { cwd: repoDir });
+    execFileSync("git", ["-c", "commit.gpgsign=false", "commit", "-m", "feature commit"], {
+      cwd: repoDir,
+    });
+
+    execFileSync("git", ["checkout", "main"], { cwd: repoDir });
+    writeFileSync(join(repoDir, "main.txt"), "main\n");
+    execFileSync("git", ["add", "main.txt"], { cwd: repoDir });
+    execFileSync("git", ["-c", "commit.gpgsign=false", "commit", "-m", "main commit"], {
+      cwd: repoDir,
+    });
+    const mainCommit = execFileSync("git", ["rev-parse", "HEAD"], { cwd: repoDir })
+      .toString()
+      .trim();
+
+    execFileSync("git", ["checkout", "feature"], { cwd: repoDir });
+
+    await mergeFromBase(repoDir, { baseRef: "main", requireCleanTarget: true, strategy: "rebase" });
+
+    execFileSync("git", ["merge-base", "--is-ancestor", mainCommit, "feature"], { cwd: repoDir });
+    const mergeCommits = execFileSync("git", ["rev-list", "--merges", "--count", "feature"], {
+      cwd: repoDir,
+    })
+      .toString()
+      .trim();
+    expect(mergeCommits).toBe("0");
+  });
+
+  it("aborts rebase-from-base on conflicts and leaves no rebase in progress", async () => {
+    writeFileSync(join(repoDir, "conflict.txt"), "base\n");
+    execFileSync("git", ["add", "conflict.txt"], { cwd: repoDir });
+    execFileSync("git", ["-c", "commit.gpgsign=false", "commit", "-m", "add conflict file"], {
+      cwd: repoDir,
+    });
+
+    execFileSync("git", ["checkout", "-b", "feature"], { cwd: repoDir });
+    writeFileSync(join(repoDir, "conflict.txt"), "feature\n");
+    execFileSync("git", ["add", "conflict.txt"], { cwd: repoDir });
+    execFileSync("git", ["-c", "commit.gpgsign=false", "commit", "-m", "feature change"], {
+      cwd: repoDir,
+    });
+
+    execFileSync("git", ["checkout", "main"], { cwd: repoDir });
+    writeFileSync(join(repoDir, "conflict.txt"), "main change\n");
+    execFileSync("git", ["add", "conflict.txt"], { cwd: repoDir });
+    execFileSync("git", ["-c", "commit.gpgsign=false", "commit", "-m", "main change"], {
+      cwd: repoDir,
+    });
+
+    execFileSync("git", ["checkout", "feature"], { cwd: repoDir });
+
+    await expect(
+      mergeFromBase(repoDir, { baseRef: "main", requireCleanTarget: true, strategy: "rebase" }),
+    ).rejects.toBeInstanceOf(MergeFromBaseConflictError);
+
+    const porcelain = execFileSync("git", ["status", "--porcelain"], { cwd: repoDir })
+      .toString()
+      .trim();
+    expect(porcelain).toBe("");
+    expect(existsSync(join(repoDir, ".git", "rebase-merge"))).toBe(false);
+    expect(existsSync(join(repoDir, ".git", "rebase-apply"))).toBe(false);
+  });
+
+  it("force-pushes with lease after rebasing a published branch", async () => {
+    const remoteDir = join(tempDir, "remote.git");
+    execFileSync("git", ["init", "--bare", "-b", "main", remoteDir]);
+    execFileSync("git", ["remote", "add", "origin", remoteDir], { cwd: repoDir });
+    execFileSync("git", ["push", "-u", "origin", "main"], { cwd: repoDir });
+
+    execFileSync("git", ["checkout", "-b", "feature"], { cwd: repoDir });
+    writeFileSync(join(repoDir, "feature.txt"), "feature\n");
+    execFileSync("git", ["add", "feature.txt"], { cwd: repoDir });
+    execFileSync("git", ["-c", "commit.gpgsign=false", "commit", "-m", "feature commit"], {
+      cwd: repoDir,
+    });
+    execFileSync("git", ["push", "-u", "origin", "feature"], { cwd: repoDir });
+
+    // Advance main so the rebase rewrites feature onto a new base.
+    execFileSync("git", ["checkout", "main"], { cwd: repoDir });
+    writeFileSync(join(repoDir, "main.txt"), "main\n");
+    execFileSync("git", ["add", "main.txt"], { cwd: repoDir });
+    execFileSync("git", ["-c", "commit.gpgsign=false", "commit", "-m", "main commit"], {
+      cwd: repoDir,
+    });
+    execFileSync("git", ["checkout", "feature"], { cwd: repoDir });
+
+    await mergeFromBase(repoDir, { baseRef: "main", requireCleanTarget: true, strategy: "rebase" });
+
+    const localHead = execFileSync("git", ["rev-parse", "feature"], { cwd: repoDir })
+      .toString()
+      .trim();
+    const remoteHead = execFileSync("git", ["rev-parse", "refs/remotes/origin/feature"], {
+      cwd: repoDir,
+    })
+      .toString()
+      .trim();
+    expect(remoteHead).toBe(localHead);
+  });
+
+  it("does not force-push when the rebase is a no-op", async () => {
+    const remoteDir = join(tempDir, "remote.git");
+    execFileSync("git", ["init", "--bare", "-b", "main", remoteDir]);
+    execFileSync("git", ["remote", "add", "origin", remoteDir], { cwd: repoDir });
+    execFileSync("git", ["push", "-u", "origin", "main"], { cwd: repoDir });
+
+    // Publish feature, then add a local commit that is never pushed. main stays put, so the
+    // rebase rewrites nothing and must not silently publish the local commit.
+    execFileSync("git", ["checkout", "-b", "feature"], { cwd: repoDir });
+    execFileSync("git", ["push", "-u", "origin", "feature"], { cwd: repoDir });
+    const publishedHead = execFileSync("git", ["rev-parse", "refs/remotes/origin/feature"], {
+      cwd: repoDir,
+    })
+      .toString()
+      .trim();
+
+    writeFileSync(join(repoDir, "feature.txt"), "feature\n");
+    execFileSync("git", ["add", "feature.txt"], { cwd: repoDir });
+    execFileSync("git", ["-c", "commit.gpgsign=false", "commit", "-m", "local unpushed"], {
+      cwd: repoDir,
+    });
+
+    await mergeFromBase(repoDir, { baseRef: "main", requireCleanTarget: true, strategy: "rebase" });
+
+    const remoteHead = execFileSync("git", ["rev-parse", "refs/remotes/origin/feature"], {
+      cwd: repoDir,
+    })
+      .toString()
+      .trim();
+    expect(remoteHead).toBe(publishedHead);
+  });
+
   it("pulls the current branch from origin", async () => {
     const remoteDir = join(tempDir, "remote.git");
     execFileSync("git", ["init", "--bare", "-b", "main", remoteDir]);

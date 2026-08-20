@@ -197,6 +197,7 @@ interface UseGitActionsInput {
     pullAndPush: ReactElement;
     merge: ReactElement;
     mergeFromBase: ReactElement;
+    rebaseFromBase: ReactElement;
     archive: ReactElement;
   };
 }
@@ -442,6 +443,9 @@ export function useGitActions({ serverId, cwd, icons }: UseGitActionsInput): Use
   const mergeFromBaseStatus = useCheckoutGitActionsStore((s) =>
     s.getStatus({ serverId, cwd, actionId: "merge-from-base" }),
   );
+  const rebaseFromBaseStatus = useCheckoutGitActionsStore((s) =>
+    s.getStatus({ serverId, cwd, actionId: "rebase-from-base" }),
+  );
 
   const runCommit = useCheckoutGitActionsStore((s) => s.commit);
   const runPull = useCheckoutGitActionsStore((s) => s.pull);
@@ -453,10 +457,14 @@ export function useGitActions({ serverId, cwd, icons }: UseGitActionsInput): Use
   const runDisablePrAutoMerge = useCheckoutGitActionsStore((s) => s.disablePrAutoMerge);
   const runMergeBranch = useCheckoutGitActionsStore((s) => s.mergeBranch);
   const runMergeFromBase = useCheckoutGitActionsStore((s) => s.mergeFromBase);
+  const runRebaseFromBase = useCheckoutGitActionsStore((s) => s.rebaseFromBase);
   const githubAutoMergeActionsEnabled = useSessionStore(
     (s) =>
       s.sessions[serverId]?.serverInfo?.features?.checkoutForgeSetAutoMerge === true ||
       s.sessions[serverId]?.serverInfo?.features?.checkoutGithubSetAutoMerge === true,
+  );
+  const rebaseFromBaseEnabled = useSessionStore(
+    (s) => s.sessions[serverId]?.serverInfo?.features?.checkoutRebaseFromBase === true,
   );
 
   const toastActionError = useCallback(
@@ -632,6 +640,21 @@ export function useGitActions({ serverId, cwd, icons }: UseGitActionsInput): Use
       });
   }, [baseRef, cwd, runMergeFromBase, serverId, t, toast, toastActionError, toastActionSuccess]);
 
+  const handleRebaseFromBase = useCallback(() => {
+    if (!baseRef) {
+      toast.error(t("workspace.git.actions.toasts.baseRefUnavailable"));
+      return;
+    }
+    void runRebaseFromBase({ serverId, cwd, baseRef })
+      .then(() => {
+        toastActionSuccess(t("workspace.git.actions.rebaseFromBase.success"));
+        return;
+      })
+      .catch((err) => {
+        toastActionError(err, t("workspace.git.actions.toasts.failedRebaseFromBase"));
+      });
+  }, [baseRef, cwd, runRebaseFromBase, serverId, t, toast, toastActionError, toastActionSuccess]);
+
   const archiveController = useWorkspaceScreenArchiveController({
     serverId,
     activeWorkspaceSelection,
@@ -685,6 +708,7 @@ export function useGitActions({ serverId, cwd, icons }: UseGitActionsInput): Use
       forgeBrandLabel: presentation.brandLabel,
       forgeChangeRequestNoun: presentation.changeRequestAbbrev,
       githubAutoMergeActionsEnabled,
+      rebaseFromBaseEnabled,
       hasPullRequest,
       pullRequestUrl: prStatus?.url ?? null,
       pullRequestState: narrowPullRequestState(prStatus?.state),
@@ -789,6 +813,12 @@ export function useGitActions({ serverId, cwd, icons }: UseGitActionsInput): Use
           icon: icons.mergeFromBase,
           handler: handleMergeFromBase,
         },
+        "rebase-from-base": {
+          disabled: isActionDisabled(actionsDisabled, rebaseFromBaseStatus),
+          status: rebaseFromBaseStatus,
+          icon: icons.rebaseFromBase,
+          handler: handleRebaseFromBase,
+        },
         "archive-workspace": {
           disabled: !archiveController.canArchive || archiveController.isArchiving,
           status: archiveController.isArchiving ? "pending" : "idle",
@@ -800,6 +830,7 @@ export function useGitActions({ serverId, cwd, icons }: UseGitActionsInput): Use
   }, [
     isGit,
     hasRemote,
+    rebaseFromBaseEnabled,
     hasPullRequest,
     prStatus?.url,
     prStatus?.state,
@@ -836,6 +867,7 @@ export function useGitActions({ serverId, cwd, icons }: UseGitActionsInput): Use
     disablePrAutoMergeStatus,
     mergeStatus,
     mergeFromBaseStatus,
+    rebaseFromBaseStatus,
     archiveController.canArchive,
     archiveController.isArchiving,
     handleCommit,
@@ -848,6 +880,7 @@ export function useGitActions({ serverId, cwd, icons }: UseGitActionsInput): Use
     handleDisablePrAutoMerge,
     handleMergeBranch,
     handleMergeFromBase,
+    handleRebaseFromBase,
     handleArchiveWorkspace,
     icons,
     prIcon,
@@ -1014,6 +1047,12 @@ function getTranslatedGitActionLabels(
         pendingLabel: t("workspace.git.actions.mergeFromBase.pending"),
         successLabel: t("workspace.git.actions.mergeFromBase.success"),
       };
+    case "rebase-from-base":
+      return {
+        label: t("workspace.git.actions.rebaseFromBase.label", { baseRef: baseRefLabel }),
+        pendingLabel: t("workspace.git.actions.rebaseFromBase.pending"),
+        successLabel: t("workspace.git.actions.rebaseFromBase.success"),
+      };
     case "archive-workspace":
       return {
         label: t("workspace.git.actions.archive.label"),
@@ -1065,6 +1104,10 @@ function translateGitActionUnavailableMessage(
       "workspace.git.actions.unavailable.updateNoBase",
     "Update isn't available while you have local changes so commit or stash them first":
       "workspace.git.actions.unavailable.updateDirty",
+    "Rebase isn't available because we couldn't determine the base branch":
+      "workspace.git.actions.unavailable.rebaseNoBase",
+    "Rebase isn't available while you have local changes so commit or stash them first":
+      "workspace.git.actions.unavailable.rebaseDirty",
     "Merge PR isn't available right now because GitHub isn't connected":
       "workspace.git.actions.unavailable.mergePrNoGithub",
     "Archive isn't available here because this workspace was not created as a Paseo worktree":
@@ -1088,6 +1131,11 @@ function translateGitActionUnavailableMessage(
     message.startsWith("Update isn't available because this branch is already up to date with ")
   ) {
     return t("workspace.git.actions.unavailable.updateCurrent", { baseRef: baseRefLabel });
+  }
+  if (
+    message.startsWith("Rebase isn't available because this branch is already up to date with ")
+  ) {
+    return t("workspace.git.actions.unavailable.rebaseCurrent", { baseRef: baseRefLabel });
   }
   const key = keyByMessage[message];
   return key ? t(key) : message;

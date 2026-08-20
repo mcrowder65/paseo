@@ -25,6 +25,7 @@ export type CheckoutGitAsyncActionId =
   | "disable-pr-auto-merge"
   | "merge-branch"
   | "merge-from-base"
+  | "rebase-from-base"
   | "discard-changes";
 
 type CheckoutKey = string;
@@ -120,6 +121,7 @@ interface CheckoutGitActionsStoreState {
   disablePrAutoMerge: (params: { serverId: string; cwd: string }) => Promise<void>;
   mergeBranch: (params: { serverId: string; cwd: string; baseRef: string }) => Promise<void>;
   mergeFromBase: (params: { serverId: string; cwd: string; baseRef: string }) => Promise<void>;
+  rebaseFromBase: (params: { serverId: string; cwd: string; baseRef: string }) => Promise<void>;
   discardChanges: (params: { serverId: string; cwd: string; paths: string[] }) => Promise<void>;
 }
 
@@ -361,6 +363,25 @@ export const useCheckoutGitActionsStore = create<CheckoutGitActionsStoreState>()
         const payload = await client.checkoutMergeFromBase(cwd, {
           baseRef,
           requireCleanTarget: true,
+        });
+        if (payload.error) {
+          throw new Error(payload.error.message);
+        }
+      },
+    });
+  },
+
+  rebaseFromBase: async ({ serverId, cwd, baseRef }) => {
+    await runCheckoutAction({
+      serverId,
+      cwd,
+      actionId: "rebase-from-base",
+      run: async () => {
+        const client = resolveClient(serverId);
+        const payload = await client.checkoutMergeFromBase(cwd, {
+          baseRef,
+          requireCleanTarget: true,
+          strategy: "rebase",
         });
         if (payload.error) {
           throw new Error(payload.error.message);
