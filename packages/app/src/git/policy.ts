@@ -21,6 +21,7 @@ export type GitActionId =
   | "disable-pr-auto-merge"
   | "merge-branch"
   | "merge-from-base"
+  | "rebase-from-base"
   | "archive-workspace";
 
 export interface GitAction {
@@ -58,6 +59,7 @@ export interface BuildGitActionsInput {
   /** Short change-request noun label (e.g. "PR", "MR") for forge-neutral unavailable copy. */
   forgeChangeRequestNoun: string;
   githubAutoMergeActionsEnabled: boolean;
+  rebaseFromBaseEnabled: boolean;
   hasPullRequest: boolean;
   pullRequestUrl: string | null;
   pullRequestState: "open" | "closed" | null;
@@ -282,6 +284,21 @@ export function buildGitActions(input: BuildGitActionsInput): GitActions {
     handler: input.runtime["merge-from-base"].handler,
   });
 
+  allActions.set("rebase-from-base", {
+    id: "rebase-from-base",
+    label: i18n.t("workspace.git.actions.rebaseFromBase.label", { baseRef: input.baseRefLabel }),
+    pendingLabel: i18n.t("workspace.git.actions.rebaseFromBase.pending"),
+    successLabel: i18n.t("workspace.git.actions.rebaseFromBase.success"),
+    disabled: input.runtime["rebase-from-base"].disabled,
+    status: input.runtime["rebase-from-base"].status,
+    unavailableMessage: input.runtime["rebase-from-base"].disabled
+      ? undefined
+      : getRebaseFromBaseUnavailableMessage(input),
+    icon: input.runtime["rebase-from-base"].icon,
+    startsGroup: false,
+    handler: input.runtime["rebase-from-base"].handler,
+  });
+
   allActions.set("archive-workspace", {
     id: "archive-workspace",
     label: i18n.t("workspace.git.actions.archive.label"),
@@ -368,6 +385,7 @@ function getPullRequestActionIds(filter: {
 function getFeatureActionIds(input: BuildGitActionsInput): GitActionId[] {
   return [
     "merge-from-base",
+    ...(input.rebaseFromBaseEnabled ? (["rebase-from-base"] as const) : []),
     "merge-branch",
     ...getPullRequestActionIds({ roles: ["status", "direct", "auto"], input }),
   ];
@@ -691,6 +709,21 @@ function getMergeFromBaseUnavailableMessage(input: BuildGitActionsInput): string
   }
   if (input.behindBaseCount === 0) {
     return i18n.t("workspace.git.actions.unavailable.updateCurrent", {
+      baseRef: input.baseRefLabel,
+    });
+  }
+  return undefined;
+}
+
+function getRebaseFromBaseUnavailableMessage(input: BuildGitActionsInput): string | undefined {
+  if (!input.baseRefAvailable) {
+    return i18n.t("workspace.git.actions.unavailable.rebaseNoBase");
+  }
+  if (input.hasUncommittedChanges) {
+    return i18n.t("workspace.git.actions.unavailable.rebaseDirty");
+  }
+  if (input.behindBaseCount === 0) {
+    return i18n.t("workspace.git.actions.unavailable.rebaseCurrent", {
       baseRef: input.baseRefLabel,
     });
   }

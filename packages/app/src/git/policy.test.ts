@@ -62,6 +62,7 @@ function createInput(
     forgeBrandLabel: "GitHub",
     forgeChangeRequestNoun: "PR",
     githubAutoMergeActionsEnabled: true,
+    rebaseFromBaseEnabled: true,
     hasPullRequest: false,
     pullRequestUrl: null,
     pullRequestState: null,
@@ -148,6 +149,11 @@ function createInput(
         handler: () => undefined,
       },
       "merge-from-base": {
+        disabled: false,
+        status: "idle",
+        handler: () => undefined,
+      },
+      "rebase-from-base": {
         disabled: false,
         status: "idle",
         handler: () => undefined,
@@ -272,6 +278,24 @@ describe("git-actions-policy", () => {
     });
   });
 
+  it("shows rebase-from-base only when the daemon advertises the capability", () => {
+    const enabled = buildGitActions(
+      createInput({ hasRemote: true, isOnBaseBranch: false, behindBaseCount: 3 }),
+    );
+    expect(enabled.secondary.some((action) => action.id === "rebase-from-base")).toBe(true);
+
+    const disabled = buildGitActions(
+      createInput({
+        hasRemote: true,
+        isOnBaseBranch: false,
+        behindBaseCount: 3,
+        rebaseFromBaseEnabled: false,
+      }),
+    );
+    expect(disabled.secondary.some((action) => action.id === "rebase-from-base")).toBe(false);
+    expect(disabled.secondary.some((action) => action.id === "merge-from-base")).toBe(true);
+  });
+
   it("keeps update-from-base off the base branch entirely", () => {
     const actions = buildGitActions(
       createInput({
@@ -303,6 +327,7 @@ describe("git-actions-policy", () => {
       "push",
       "pull-and-push",
       "merge-from-base",
+      "rebase-from-base",
       "merge-branch",
       "pr",
       "merge-pr-squash",
@@ -654,6 +679,7 @@ describe("git-actions-policy", () => {
       "push",
       "pull-and-push",
       "merge-from-base",
+      "rebase-from-base",
       "merge-branch",
       "pr",
       "merge-pr-squash",
@@ -831,6 +857,7 @@ describe("git-actions-policy", () => {
       "push",
       "pull-and-push",
       "merge-from-base",
+      "rebase-from-base",
       "merge-branch",
       "pr",
       "merge-pr-squash",
@@ -874,6 +901,7 @@ describe("git-actions-policy", () => {
       "push",
       "pull-and-push",
       "merge-from-base",
+      "rebase-from-base",
       "merge-branch",
       "pr",
       "enable-pr-auto-merge-squash",
@@ -1017,6 +1045,7 @@ describe("git-actions-policy", () => {
       "push",
       "pull-and-push",
       "merge-from-base",
+      "rebase-from-base",
       "merge-branch",
       "pr",
       "merge-pr-merge",
@@ -1079,6 +1108,7 @@ describe("git-actions-policy", () => {
       "pull",
       "push",
       "pull-and-push",
+      "rebase-from-base",
       "merge-branch",
       "pr",
       "merge-pr-merge",

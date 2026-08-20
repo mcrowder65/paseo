@@ -38,6 +38,7 @@ import type {
   CheckoutCommitResponse,
   CheckoutMergeResponse,
   CheckoutMergeFromBaseResponse,
+  UpdateFromBaseStrategy,
   CheckoutPullResponse,
   CheckoutPushResponse,
   CheckoutRefreshResponse,
@@ -3810,7 +3811,7 @@ export class DaemonClient {
 
   async checkoutMergeFromBase(
     cwd: string,
-    input: { baseRef?: string; requireCleanTarget?: boolean },
+    input: { baseRef?: string; requireCleanTarget?: boolean; strategy?: UpdateFromBaseStrategy },
     requestId?: string,
   ): Promise<CheckoutMergeFromBasePayload> {
     return this.sendCorrelatedSessionRequest({
@@ -3820,6 +3821,7 @@ export class DaemonClient {
         cwd,
         baseRef: input.baseRef,
         requireCleanTarget: input.requireCleanTarget,
+        strategy: input.strategy,
       },
       responseType: "checkout_merge_from_base_response",
     });

@@ -753,6 +753,11 @@ export const ar: TranslationResources = {
           pending: "جارٍ التحديث...",
           success: "تم التحديث",
         },
+        rebaseFromBase: {
+          label: "إعادة الأساس على {{baseRef}}",
+          pending: "جارٍ إعادة الأساس...",
+          success: "تمت إعادة الأساس",
+        },
         archive: {
           label: "أرشفة مساحة العمل",
           pending: "أرشفة...",
@@ -804,6 +809,10 @@ export const ar: TranslationResources = {
           updateNoBase: "التحديث غير متاح لأننا لم نتمكن من تحديد الفرع الأساسي",
           updateDirty: "التحديث غير متاح أثناء وجود تغييرات محلية، لذا قم بتنفيذها أو تخزينها أولاً",
           updateCurrent: "التحديث غير متاح لأن هذا الفرع محدث بالفعل باستخدام{{baseRef}}",
+          rebaseNoBase: "إعادة الأساس غير متاحة لأننا لم نتمكن من تحديد الفرع الأساسي",
+          rebaseDirty:
+            "إعادة الأساس غير متاحة أثناء وجود تغييرات محلية، لذا قم بتنفيذها أو حفظها في المخزن المؤقت أولاً",
+          rebaseCurrent: "إعادة الأساس غير متاحة لأن هذا الفرع محدث بالفعل باستخدام {{baseRef}}",
           mergePrNoGithub: "دمج PR غير متاح الآن لأن GitHub غير متصل",
           archiveNotWorktree:
             "الأرشيف غير متاح هنا لأنه لم يتم إنشاء مساحة العمل هذه كشجرة عمل Paseo",
@@ -829,6 +838,7 @@ export const ar: TranslationResources = {
           baseRefUnavailable: "المرجع الأساسي غير متاح",
           failedMerge: "فشل الدمج",
           failedMergeFromBase: "فشل الدمج من القاعدة",
+          failedRebaseFromBase: "فشلت إعادة الأساس على القاعدة",
         },
         archiveWarning: {
           title: 'الأرشيف "{{workspaceName}}"؟',

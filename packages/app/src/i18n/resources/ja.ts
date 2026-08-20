@@ -755,6 +755,11 @@ export const ja: TranslationResources = {
           pending: "更新中...",
           success: "更新しました",
         },
+        rebaseFromBase: {
+          label: "{{baseRef}}にリベース",
+          pending: "リベース中...",
+          success: "リベースしました",
+        },
         archive: {
           label: "ワークスペースをアーカイブ",
           pending: "アーカイブ中...",
@@ -812,6 +817,11 @@ export const ja: TranslationResources = {
           updateDirty:
             "ローカルに変更があるため更新は利用できません。先にコミットまたはスタッシュしてください",
           updateCurrent: "このブランチはすでに{{baseRef}}と最新の状態のため、更新は利用できません",
+          rebaseNoBase: "ベースブランチを特定できなかったため、リベースは利用できません",
+          rebaseDirty:
+            "ローカルの変更があるためリベースは利用できません。まずコミットまたはスタッシュしてください",
+          rebaseCurrent:
+            "このブランチはすでに{{baseRef}}と最新の状態のため、リベースは利用できません",
           mergePrNoGithub: "GitHubが接続されていないため、PRのマージは現在利用できません",
           archiveNotWorktree:
             "このワークスペースはPaseoワークツリーとして作成されていないため、アーカイブはここでは利用できません",
@@ -840,6 +850,7 @@ export const ja: TranslationResources = {
           baseRefUnavailable: "ベースRefが利用できません",
           failedMerge: "マージに失敗しました",
           failedMergeFromBase: "ベースからのマージに失敗しました",
+          failedRebaseFromBase: "ベースへのリベースに失敗しました",
         },
         archiveWarning: {
           title: '"{{workspaceName}}"をアーカイブしますか？',

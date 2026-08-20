@@ -760,15 +760,25 @@ export class MergeFromBaseConflictError extends Error {
   readonly baseRef: string;
   readonly currentBranch: string;
   readonly conflictFiles: string[];
+  readonly strategy: UpdateFromBaseStrategy;
 
-  constructor(options: { baseRef: string; currentBranch: string; conflictFiles: string[] }) {
+  constructor(options: {
+    baseRef: string;
+    currentBranch: string;
+    conflictFiles: string[];
+    strategy?: UpdateFromBaseStrategy;
+  }) {
+    const strategy = options.strategy ?? "merge";
     super(
-      `Merge conflict while merging ${options.baseRef} into ${options.currentBranch}. Please merge manually.`,
+      strategy === "rebase"
+        ? `Rebase conflict while rebasing ${options.currentBranch} onto ${options.baseRef}. Please resolve manually.`
+        : `Merge conflict while merging ${options.baseRef} into ${options.currentBranch}. Please merge manually.`,
     );
     this.name = "MergeFromBaseConflictError";
     this.baseRef = options.baseRef;
     this.currentBranch = options.currentBranch;
     this.conflictFiles = options.conflictFiles;
+    this.strategy = strategy;
   }
 }
 
@@ -837,9 +847,12 @@ export interface MergeToBaseOptions {
   commitMessage?: string;
 }
 
+export type UpdateFromBaseStrategy = "merge" | "rebase";
+
 export interface MergeFromBaseOptions {
   baseRef?: string;
   requireCleanTarget?: boolean;
+  strategy?: UpdateFromBaseStrategy;
 }
 
 export interface CheckoutContext {
@@ -910,6 +923,19 @@ export async function getCurrentBranch(cwd: string): Promise<string | null> {
       return await getRebaseHeadBranch(cwd);
     }
     return branch.length > 0 ? branch : null;
+  } catch {
+    return null;
+  }
+}
+
+async function getHeadCommit(cwd: string): Promise<string | null> {
+  try {
+    const { stdout } = await runGitCommand(["rev-parse", "HEAD"], {
+      cwd,
+      envOverlay: READ_ONLY_GIT_ENV,
+    });
+    const sha = stdout.trim();
+    return sha.length > 0 ? sha : null;
   } catch {
     return null;
   }
@@ -3590,8 +3616,38 @@ export async function mergeFromBase(
     }
   }
 
+  const strategy = options.strategy ?? "merge";
+
   const bestBaseRef = await resolveMostAheadBaseRef(cwd, baseRef);
   if (bestBaseRef === currentBranch) {
+    return;
+  }
+
+  if (strategy === "rebase") {
+    const headBeforeRebase = await getHeadCommit(cwd);
+    try {
+      await runGitCommand(["rebase", bestBaseRef], { cwd, timeout: 120_000 });
+    } catch (error) {
+      await detectAndThrowMergeFromBaseConflict({
+        cwd,
+        error,
+        baseRef: bestBaseRef,
+        currentBranch,
+        strategy,
+      });
+      // A non-conflict failure (e.g. a rejecting hook or signing failure) can stop the
+      // rebase midway without leaving unmerged files, so the detector above won't abort.
+      // Clear any in-progress rebase before surfacing the error to avoid a stuck worktree.
+      await abortGitPullConflictState(cwd);
+      throw error;
+    }
+
+    // A rebase that rewrote history makes a plain push non-fast-forward, so force-push-with-lease
+    // to keep a published branch matching local. Skip when HEAD didn't move (nothing to publish).
+    const headAfterRebase = await getHeadCommit(cwd);
+    if (headAfterRebase && headAfterRebase !== headBeforeRebase) {
+      await forcePushRebasedBranchWithLease(cwd);
+    }
     return;
   }
 
@@ -3603,6 +3659,7 @@ export async function mergeFromBase(
       error,
       baseRef: bestBaseRef,
       currentBranch,
+      strategy,
     });
     throw error;
   }
@@ -3613,12 +3670,13 @@ interface DetectMergeFromBaseConflictInput {
   error: unknown;
   baseRef: string;
   currentBranch: string;
+  strategy: UpdateFromBaseStrategy;
 }
 
 async function detectAndThrowMergeFromBaseConflict(
   input: DetectMergeFromBaseConflictInput,
 ): Promise<void> {
-  const { cwd, error, baseRef, currentBranch } = input;
+  const { cwd, error, baseRef, currentBranch, strategy } = input;
   const errorDetails =
     error instanceof Error
       ? `${error.message}\n${getErrorStderr(error)}\n${getErrorStdout(error)}`
@@ -3650,8 +3708,9 @@ async function detectAndThrowMergeFromBaseConflict(
     const conflictDetected =
       conflicts.length > 0 || /CONFLICT|Automatic merge failed/i.test(errorDetails);
     if (conflictDetected) {
+      const abortArgs = strategy === "rebase" ? ["rebase", "--abort"] : ["merge", "--abort"];
       try {
-        await runGitCommand(["merge", "--abort"], { cwd, timeout: 120_000 });
+        await runGitCommand(abortArgs, { cwd, timeout: 120_000 });
       } catch {
         // ignore
       }
@@ -3659,6 +3718,7 @@ async function detectAndThrowMergeFromBaseConflict(
         baseRef,
         currentBranch,
         conflictFiles: conflicts.length > 0 ? conflicts : [],
+        strategy,
       });
     }
   } catch (innerError) {
@@ -3667,6 +3727,25 @@ async function detectAndThrowMergeFromBaseConflict(
     }
     // ignore detection failures
   }
+}
+
+async function forcePushRebasedBranchWithLease(cwd: string): Promise<void> {
+  const currentBranch = await getCurrentBranch(cwd);
+  if (!currentBranch || currentBranch === "HEAD") {
+    return;
+  }
+  const pushTarget =
+    (await getCurrentBranchConfiguredPushTarget(cwd, currentBranch)) ??
+    (await getCurrentBranchUpstreamPushTarget(cwd, currentBranch));
+  // No tracking/push target means the branch was never published, so there is
+  // nothing to reconcile — the caller can push normally later.
+  if (!pushTarget) {
+    return;
+  }
+  await runGitCommand(
+    ["push", "--force-with-lease", pushTarget.remoteName, `HEAD:refs/heads/${pushTarget.headRef}`],
+    { cwd, timeout: 120_000 },
+  );
 }
 
 export async function pullCurrentBranch(cwd: string, forgeService?: ForgeService): Promise<void> {

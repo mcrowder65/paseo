@@ -756,6 +756,11 @@ export const ptBR: TranslationResources = {
           pending: "Atualizando...",
           success: "Atualizado",
         },
+        rebaseFromBase: {
+          label: "Fazer rebase sobre {{baseRef}}",
+          pending: "Fazendo rebase...",
+          success: "Rebaseado",
+        },
         archive: {
           label: "Arquivar workspace",
           pending: "Arquivando...",
@@ -821,6 +826,12 @@ export const ptBR: TranslationResources = {
             "Atualizar não está disponível enquanto há alterações locais. Faça commit ou stash primeiro",
           updateCurrent:
             "Atualizar não está disponível porque esta branch já está atualizada com {{baseRef}}",
+          rebaseNoBase:
+            "O rebase não está disponível porque não foi possível determinar a branch base",
+          rebaseDirty:
+            "O rebase não está disponível enquanto você tiver alterações locais, então faça commit ou stash delas primeiro",
+          rebaseCurrent:
+            "O rebase não está disponível porque esta branch já está atualizada com {{baseRef}}",
           mergePrNoGithub:
             "Merge da PR não está disponível agora porque o GitHub não está conectado",
           archiveNotWorktree:
@@ -851,6 +862,7 @@ export const ptBR: TranslationResources = {
           baseRefUnavailable: "Ref base indisponível",
           failedMerge: "Falha ao fazer merge",
           failedMergeFromBase: "Falha ao fazer merge da base",
+          failedRebaseFromBase: "Falha ao fazer rebase sobre a base",
         },
         archiveWarning: {
           title: 'Arquivar "{{workspaceName}}"?',

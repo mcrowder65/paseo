@@ -749,6 +749,11 @@ export const zhCN: TranslationResources = {
           pending: "正在更新...",
           success: "已更新",
         },
+        rebaseFromBase: {
+          label: "变基到 {{baseRef}}",
+          pending: "正在变基...",
+          success: "已变基",
+        },
         archive: {
           label: "归档工作区",
           pending: "正在归档...",
@@ -797,6 +802,9 @@ export const zhCN: TranslationResources = {
           updateNoBase: "无法更新，因为无法确定 base branch",
           updateDirty: "有本地变更时无法更新，请先 commit 或 stash",
           updateCurrent: "无法更新，因为此分支已与 {{baseRef}} 保持最新",
+          rebaseNoBase: "无法变基，因为无法确定 base 分支",
+          rebaseDirty: "有本地更改时无法变基，请先提交或暂存它们",
+          rebaseCurrent: "无法变基，因为此分支已与 {{baseRef}} 保持最新",
           mergePrNoGithub: "当前无法 merge PR，因为 GitHub 未连接",
           archiveNotWorktree: "此处无法归档，因为此 workspace 不是作为 Paseo worktree 创建的",
           mergePrNoForge: "当前无法 merge {{noun}}，因为 {{brand}} 未连接",
@@ -821,6 +829,7 @@ export const zhCN: TranslationResources = {
           baseRefUnavailable: "Base ref 不可用",
           failedMerge: "Merge 失败",
           failedMergeFromBase: "从 base merge 失败",
+          failedRebaseFromBase: "变基到 base 失败",
         },
         archiveWarning: {
           title: "归档「{{workspaceName}}」？",
