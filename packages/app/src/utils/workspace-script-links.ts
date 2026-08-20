@@ -83,10 +83,17 @@ export function resolveWorkspaceScriptLink(input: {
   const publicProxyUrl =
     script.publicProxyUrl ?? (!isLocalOnlyUrl(script.proxyUrl) ? script.proxyUrl : null);
 
+  // A script that declares its own url is served at that origin and is not proxied, so the
+  // declared url replaces the derived localhost one and outranks any leftover proxy route.
+  const declaredUrl = script.declaredUrl ?? null;
+
   const targets: WorkspaceScriptLinkTarget[] = [];
+  addTarget(targets, "direct", declaredUrl);
   addTarget(targets, "public", publicProxyUrl);
   addTarget(targets, "paseo", localProxyUrl);
-  addTarget(targets, "direct", buildDirectServiceUrl(activeConnection, script.port));
+  if (!declaredUrl) {
+    addTarget(targets, "direct", buildDirectServiceUrl(activeConnection, script.port));
+  }
 
   return { primary: targets[0] ?? null, targets };
 }

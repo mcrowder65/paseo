@@ -154,6 +154,59 @@ describe("script-status-projection", () => {
     }
   });
 
+  it("projects a declared service url without proxy urls", () => {
+    const workspaceId = "workspace-declared-url";
+    const workspace = createWorkspaceRepo({
+      paseoConfig: {
+        scripts: {
+          web: {
+            type: "service",
+            command: "just dev",
+            url: "https://feat-x.falcon.local.com:8443",
+          },
+        },
+      },
+    });
+    const runtimeStore = new WorkspaceScriptRuntimeStore();
+    runtimeStore.set({
+      workspaceId,
+      scriptName: "web",
+      type: "service",
+      lifecycle: "running",
+      terminalId: "term-web",
+      exitCode: null,
+    });
+
+    try {
+      expect(
+        buildPayloads({
+          workspaceId,
+          workspaceDirectory: workspace.repoDir,
+          runtimeStore,
+          daemonPort: 6767,
+          resolveHealth: () => "unhealthy",
+        }),
+      ).toEqual([
+        {
+          scriptName: "web",
+          type: "service",
+          hostname: "web",
+          port: null,
+          declaredUrl: "https://feat-x.falcon.local.com:8443",
+          localProxyUrl: null,
+          publicProxyUrl: null,
+          proxyUrl: null,
+          lifecycle: "running",
+          health: null,
+          exitCode: null,
+          terminalId: "term-web",
+        },
+      ]);
+    } finally {
+      workspace.cleanup();
+    }
+  });
+
   it("builds service hostnames from service-provided git metadata", () => {
     const workspaceId = "workspace-service-metadata";
     const workspace = createWorkspaceRepo({

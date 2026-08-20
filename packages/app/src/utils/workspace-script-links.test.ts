@@ -191,6 +191,32 @@ describe("resolveWorkspaceScriptLink", () => {
     });
   });
 
+  it("uses a declared url instead of the derived localhost url", () => {
+    const declaredUrl = "https://feat-x.falcon.local.com:8443";
+    expect(
+      resolveLink(
+        { type: "directTcp", endpoint: "localhost:6767", display: "localhost:6767" },
+        {
+          ...runningService,
+          declaredUrl,
+          localProxyUrl: null,
+          publicProxyUrl: null,
+          proxyUrl: null,
+        },
+      ),
+    ).toEqual({
+      primary: { kind: "direct", label: "feat-x.falcon.local.com:8443", url: declaredUrl },
+      targets: [{ kind: "direct", label: "feat-x.falcon.local.com:8443", url: declaredUrl }],
+    });
+  });
+
+  it("ranks a declared url ahead of proxy routes left over from a running service", () => {
+    const declaredUrl = "https://feat-x.falcon.local.com:8443";
+    expect(
+      resolveLink(null, { ...runningService, declaredUrl }).targets.map((target) => target.url),
+    ).toEqual([declaredUrl, "http://web--feature--paseo.localhost:6767"]);
+  });
+
   it("has no routes for stopped services or plain scripts", () => {
     expect(resolveLink(null, { ...runningService, lifecycle: "stopped" })).toEqual({
       primary: null,

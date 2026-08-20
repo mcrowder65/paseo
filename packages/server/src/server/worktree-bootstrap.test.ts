@@ -491,7 +491,7 @@ describe("runAsyncWorktreeBootstrap", () => {
   }
 
   function commitPaseoScripts(
-    scripts: Record<string, { command: string; type?: "script" | "service" }>,
+    scripts: Record<string, { command: string; type?: "script" | "service"; url?: string }>,
     message = "add script config",
   ): void {
     writeFileSync(join(repoDir, "paseo.json"), JSON.stringify({ scripts }));
@@ -539,6 +539,44 @@ describe("runAsyncWorktreeBootstrap", () => {
       lifecycle: "running",
       exitCode: null,
       terminalId: "term-1",
+    });
+  });
+
+  it("spawns a service that declares its own url without a proxy route or port env", async () => {
+    commitPaseoScripts({
+      web: {
+        type: "service",
+        command: "just dev",
+        url: "https://feat-x.falcon.local.com:8443",
+      },
+    });
+
+    const routeStore = new ScriptRouteStore();
+    const runtimeStore = new WorkspaceScriptRuntimeStore();
+    const createTerminalCalls: CreateTerminalCall[] = [];
+    const terminalRecords: StubTerminalRecord[] = [];
+
+    const result = await spawnWorkspaceScript({
+      repoRoot: repoDir,
+      workspaceId: repoDir,
+      projectSlug: "repo",
+      branchName: "feature-declared-url",
+      scriptName: "web",
+      daemonPort: 6767,
+      serviceProxy: routeStore,
+      runtimeStore,
+      terminalManager: createStubTerminalManager(createTerminalCalls, terminalRecords),
+    });
+
+    expect(result.hostname).toBeNull();
+    expect(result.port).toBeNull();
+    expect(routeStore.listRoutes()).toEqual([]);
+    expect(createTerminalCalls[0]?.env).toBeUndefined();
+    expect(terminalRecords[0]?.sentInputs).toEqual(["just dev\r"]);
+    expect(runtimeStore.get({ workspaceId: repoDir, scriptName: "web" })).toMatchObject({
+      type: "service",
+      lifecycle: "running",
+      exitCode: null,
     });
   });
 

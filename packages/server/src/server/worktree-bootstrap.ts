@@ -5,6 +5,7 @@ import type { TerminalSession } from "../terminal/terminal.js";
 import {
   getScriptConfigs,
   getWorktreeTerminalSpecs,
+  isProxiedServiceScript,
   isServiceScript,
   paseoConfigParseError,
   processCarriageReturns,
@@ -755,7 +756,7 @@ async function setupServiceScriptRoute(params: {
 
   const serviceDeclarations: Array<{ scriptName: string; port?: number }> = [];
   for (const [configuredScriptName, scriptConfig] of scriptConfigs) {
-    if (isServiceScript(scriptConfig)) {
+    if (isProxiedServiceScript(scriptConfig)) {
       serviceDeclarations.push({
         scriptName: configuredScriptName,
         port: scriptConfig.port,
@@ -889,6 +890,7 @@ export async function spawnWorkspaceScript(
   }
 
   const serviceScript = isServiceScript(config);
+  const proxiedServiceScript = isProxiedServiceScript(config);
   const scriptType = serviceScript ? "service" : "script";
   let hostname: string | null = null;
   let port: number | null = null;
@@ -903,7 +905,7 @@ export async function spawnWorkspaceScript(
 
     const existingRuntimeEntry = runtimeStore.get({ workspaceId, scriptName });
     let env: Record<string, string> | undefined;
-    if (serviceScript) {
+    if (proxiedServiceScript) {
       const serviceSetup = await setupServiceScriptRoute({
         repoRoot,
         scriptConfigs,
@@ -1008,7 +1010,7 @@ export async function spawnWorkspaceScript(
         terminalId: terminal.id,
         type: scriptType,
       },
-      serviceScript
+      hostname
         ? `Registered script proxy: ${hostname} -> 127.0.0.1:${port}`
         : "Started workspace script",
     );

@@ -150,6 +150,28 @@ Run them from the app, or manage them from automation with [`paseo script`](/doc
 
 Omit `port` to let Paseo auto-assign one. Bind your process to `$PASEO_PORT` rather than hard-coding, each worktree gets a distinct port so multiple copies of the same service coexist.
 
+### Services that own their URL
+
+Some dev servers can only be reached at one address: they terminate TLS with their own certificate, or the hostname is what identifies the tenant to an SSO provider. Declare that address with `url` and Paseo links to it as-is.
+
+```json
+{
+  "scripts": {
+    "dev": {
+      "type": "service",
+      "command": "just dev",
+      "url": "https://feat-x.falcon.local.com:8443"
+    }
+  }
+}
+```
+
+The url must be absolute and `http`/`https`; anything else is ignored and the script falls back to a normal proxied service.
+
+A declared url turns proxying off for that script. Paseo assigns no port, registers no reverse-proxy route, injects no `PASEO_PORT`/`PASEO_URL`/`PASEO_SERVICE_*` variables, and reports no health — your command owns its own address. Peer services don't see it in their `PASEO_SERVICE_*` variables either. Everything else is unchanged: lifecycle badge, start/stop/restart, attached-log terminal, and the open/copy chip, which points at the declared url.
+
+The url is static. If your command computes its address at launch, hard-code the address the command will use.
+
 ### Dynamic port allocation
 
 By default, Paseo asks the OS for an available ephemeral port. Configure a range globally in
