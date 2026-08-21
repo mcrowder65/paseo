@@ -19,6 +19,7 @@ import type {
   WorkspaceDescriptorPayload,
   WorkspaceCreateRequest,
 } from "@getpaseo/protocol/messages";
+import type { WorkspaceLabelDefinition } from "@getpaseo/protocol/workspace-labels";
 import { DaemonClient } from "./daemon-client.js";
 import type {
   FetchAgentsEntry,
@@ -160,6 +161,27 @@ export interface PaseoWorkspaceActions {
    * The returned function only removes this SDK listener.
    */
   subscribe(handler: PaseoWorkspaceUpdateHandler): () => void;
+  readonly labels: PaseoWorkspaceLabelActions;
+}
+
+export interface PaseoWorkspaceLabelActions {
+  /**
+   * The selected host's label catalog — each name paired with its colour. Which
+   * labels a given workspace carries lives on the workspace descriptor's
+   * `labels`; this is the palette those names are drawn from.
+   */
+  list(requestId?: string): Promise<WorkspaceLabelDefinition[]>;
+  /**
+   * Add or remove one label on one workspace. `assigned: false` removes it.
+   * Labels are multi-valued, so "move a workspace between labels" is an unassign
+   * followed by an assign. Resolves to the workspace's labels after the change.
+   */
+  assign(options: {
+    workspaceId: string;
+    label: WorkspaceLabelDefinition;
+    assigned: boolean;
+    requestId?: string;
+  }): Promise<string[]>;
 }
 
 type PaseoAgentSessionConfig = CreateAgentRequestMessage["config"];
@@ -411,6 +433,11 @@ export function createPaseoApi(daemonClient: DaemonClient): PaseoApi {
   };
   const createWorkspaceHandle = createWorkspaceHandleFactory(daemonClient, createAgent);
 
+  // One catalog subscription per API instance: reusing the id keeps the daemon
+  // from accruing a fresh subscription on every list() call. Each list still
+  // asks for a full snapshot (no sync cursor), so callers never track deltas.
+  const labelSubscriptionId = createGeneratedClientId();
+
   return {
     workspaces: {
       list: (options) => daemonClient.fetchWorkspaces(options),
@@ -430,6 +457,24 @@ export function createPaseoApi(daemonClient: DaemonClient): PaseoApi {
         daemonClient.on("workspace_update", (message) => {
           handler(message.payload);
         }),
+      labels: {
+        list: async (requestId) => {
+          const payload = await daemonClient.listWorkspaceLabels({
+            subscriptionId: labelSubscriptionId,
+            ...(requestId ? { requestId } : {}),
+          });
+          return payload.labels;
+        },
+        assign: async (options) => {
+          const payload = await daemonClient.setWorkspaceLabel({
+            workspaceId: options.workspaceId,
+            label: options.label,
+            assigned: options.assigned,
+            ...(options.requestId ? { requestId: options.requestId } : {}),
+          });
+          return payload.workspaceLabels;
+        },
+      },
     },
     agents: {
       list: (options) => daemonClient.fetchAgents(options),
