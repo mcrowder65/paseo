@@ -34,11 +34,13 @@ import { withUnistyles } from "react-native-unistyles";
 import {
   ChevronDown,
   ChevronRight,
+  Circle,
   CircleAlert,
   CircleCheck,
   CircleDot,
   CircleX,
 } from "lucide-react-native";
+import { WorkspaceLabelDot } from "@/workspace-labels/swatch";
 import { useToast } from "@/contexts/toast-context";
 import { useMutation } from "@tanstack/react-query";
 import { getHostRuntimeStore } from "@/runtime/host-runtime";
@@ -104,6 +106,7 @@ const runningColorMapping = (theme: Theme) => ({
 
 const ThemedChevronDown = withUnistyles(ChevronDown);
 const ThemedChevronRight = withUnistyles(ChevronRight);
+const ThemedCircle = withUnistyles(Circle);
 const ThemedCircleAlert = withUnistyles(CircleAlert);
 const ThemedCircleCheck = withUnistyles(CircleCheck);
 const ThemedCircleDot = withUnistyles(CircleDot);
@@ -468,12 +471,24 @@ function StatusGroupLeadingVisual({
   showChevron: boolean;
 }) {
   if (!showChevron) {
-    return <StatusGroupIcon bucket={leading.bucket} />;
+    return <SidebarGroupLeadingIcon leading={leading} />;
   }
   if (collapsed) {
     return <ThemedChevronRight size={14} uniProps={foregroundMutedColorMapping} />;
   }
   return <ThemedChevronDown size={14} uniProps={foregroundMutedColorMapping} />;
+}
+
+function SidebarGroupLeadingIcon({ leading }: { leading: SidebarWorkspaceGroup["leading"] }) {
+  if (leading.kind === "label") {
+    // Unlabelled has no color, so it borrows the same hollow ring the label filter menu gives it.
+    return leading.color ? (
+      <WorkspaceLabelDot color={leading.color} />
+    ) : (
+      <ThemedCircle size={11} uniProps={foregroundMutedColorMapping} />
+    );
+  }
+  return <StatusGroupIcon bucket={leading.bucket} />;
 }
 
 function StatusGroupIcon({ bucket }: { bucket: StatusBucket }) {
