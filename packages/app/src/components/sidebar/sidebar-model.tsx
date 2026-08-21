@@ -1,5 +1,6 @@
 import { useTranslation } from "react-i18next";
 import React, { createContext, useContext, useEffect, useMemo, type ReactNode } from "react";
+import { useTranslation } from "react-i18next";
 import {
   useSidebarWorkspacesList,
   type SidebarProjectEntry,
@@ -62,7 +63,9 @@ export function SidebarModelProvider({
   const labelFilter = useSidebarViewStore((state) => state.labelFilter);
   const projectFilters = useSidebarViewStore((state) => state.projectFilters);
   const reconcileLabelFilter = useSidebarViewStore((state) => state.reconcileLabelFilter);
-  const { hosts: labelHosts } = useWorkspaceLabelProjection();
+  const { hosts: labelHosts, labels: labelDefinitions } = useWorkspaceLabelProjection();
+  const { t } = useTranslation();
+  const unlabelledLabel = t("workspaceLabels.unlabelled");
   const collapsedProjectKeys = useSidebarCollapsedSectionsStore(
     (state) => state.collapsedProjectKeys,
   );
@@ -156,6 +159,8 @@ export function SidebarModelProvider({
       workspaceEntriesByKey: filteredWorkspaceEntriesByKey,
       projectNamesByViewKey: list.projectNamesByViewKey,
       groupMode,
+      labelDefinitions,
+      unlabelledLabel,
       pinnedCollapsed,
       collapsedProjectKeys,
       collapsedWorkspaceGroupKeys,
@@ -165,6 +170,8 @@ export function SidebarModelProvider({
       collapsedProjectKeys,
       collapsedWorkspaceGroupKeys,
       groupMode,
+      labelDefinitions,
+      unlabelledLabel,
       list.projectNamesByViewKey,
       filteredProjects,
       pinnedCollapsed,

@@ -6,7 +6,7 @@ import { z } from "zod";
 import { workspaceLabelKey } from "@getpaseo/protocol/workspace-labels";
 import { createValidatedPersistStorage } from "@/storage/validated-persist-storage";
 
-export type SidebarGroupMode = "project" | "status";
+export type SidebarGroupMode = "project" | "status" | "label";
 
 const SIDEBAR_VIEW_STORAGE_KEY = "sidebar-view";
 const LEGACY_SIDEBAR_GROUP_MODE_STORAGE_KEY = "sidebar-group-mode";
@@ -103,6 +103,10 @@ const SidebarViewPersistedStateSchema = z.strictObject({
 
 type SidebarViewStorageState = z.infer<typeof SidebarViewPersistedStateSchema>;
 
+function normalizeGroupMode(mode: SidebarGroupMode | undefined): SidebarGroupMode {
+  return mode === "status" || mode === "label" ? mode : "project";
+}
+
 function readLegacyGroupMode(persistedState: SidebarViewStorageState): SidebarGroupMode | null {
   const groupModeByServerId = persistedState.groupModeByServerId;
   if (!groupModeByServerId) {
@@ -155,7 +159,7 @@ export function migrateSidebarViewState(persistedState: unknown): SidebarViewPer
 
   return {
     showBackground: state.showBackground ?? false,
-    groupMode: state.groupMode === "status" ? "status" : "project",
+    groupMode: normalizeGroupMode(state.groupMode),
     workspaceSort: state.workspaceSort ?? "created",
     hostFilters: readHostFilters(state),
     projectFilters: state.projectFilters ?? [],

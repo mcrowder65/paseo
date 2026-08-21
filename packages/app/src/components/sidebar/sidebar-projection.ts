@@ -19,7 +19,12 @@ import {
   type SidebarShortcutModel,
   type SidebarShortcutSection,
 } from "@/utils/sidebar-shortcuts";
-import { statusWorkspaceGroups, type SidebarWorkspaceGroup } from "./sidebar-labels";
+import type { WorkspaceLabelDefinition } from "@getpaseo/protocol/workspace-labels";
+import {
+  labelWorkspaceGroups,
+  statusWorkspaceGroups,
+  type SidebarWorkspaceGroup,
+} from "./sidebar-labels";
 
 export interface SidebarProjection {
   pinnedGroups: PinnedSidebarGroups;
@@ -43,6 +48,8 @@ export interface SidebarProjectionInput {
   workspaceEntriesByKey: ReadonlyMap<string, SidebarWorkspaceEntry>;
   projectNamesByViewKey: Map<string, string>;
   groupMode: SidebarGroupMode;
+  labelDefinitions: readonly WorkspaceLabelDefinition[];
+  unlabelledLabel: string;
   pinnedCollapsed: boolean;
   collapsedProjectKeys: ReadonlySet<string>;
   collapsedWorkspaceGroupKeys: ReadonlySet<string>;
@@ -92,7 +99,7 @@ export function buildSidebarProjection(input: SidebarProjectionInput): SidebarPr
   };
 }
 
-/** Project mode keeps its project headers and groups nothing; status mode groups the rows. */
+/** Project mode keeps its project headers and groups nothing; every other mode groups the rows. */
 function buildWorkspaceGroups(
   input: SidebarProjectionInput,
   unpinnedWorkspaces: SidebarWorkspaceEntry[],
@@ -104,5 +111,11 @@ function buildWorkspaceGroups(
       return statusWorkspaceGroups(
         buildStatusGroups(unpinnedWorkspaces, input.projectNamesByViewKey, input.t),
       );
+    case "label":
+      return labelWorkspaceGroups({
+        workspaces: unpinnedWorkspaces,
+        labelDefinitions: input.labelDefinitions,
+        unlabelledLabel: input.unlabelledLabel,
+      });
   }
 }
