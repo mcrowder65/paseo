@@ -215,6 +215,58 @@ test("createPaseoClient exposes workspace list through the daemon client", async
   await client.close();
 });
 
+test("workspace label actions list the catalog and assign through the daemon RPCs", async () => {
+  const { client, ws } = await connectClient();
+
+  const listPromise = client.workspaces.labels.list();
+  const listRequest = parseSentSessionMessage(ws.sent.at(-1));
+  expect(listRequest).toMatchObject({
+    type: "workspace.label.list.request",
+    subscribe: { subscriptionId: expect.any(String) },
+  });
+
+  ws.message(
+    sessionMessage({
+      type: "workspace.label.list.response",
+      payload: {
+        requestId: listRequest.requestId,
+        labels: [{ name: "In review", color: "sky" }],
+        sync: { mode: "snapshot", generation: "g1", headSeq: 0, removals: [] },
+      },
+    }),
+  );
+
+  await expect(listPromise).resolves.toEqual([{ name: "In review", color: "sky" }]);
+
+  const assignPromise = client.workspaces.labels.assign({
+    workspaceId: "workspace_sdk",
+    label: { name: "In review", color: "sky" },
+    assigned: true,
+  });
+  const assignRequest = parseSentSessionMessage(ws.sent.at(-1));
+  expect(assignRequest).toMatchObject({
+    type: "workspace.label.assignment.set.request",
+    workspaceId: "workspace_sdk",
+    label: { name: "In review", color: "sky" },
+    assigned: true,
+  });
+
+  ws.message(
+    sessionMessage({
+      type: "workspace.label.assignment.set.response",
+      payload: {
+        requestId: assignRequest.requestId,
+        label: { name: "In review", color: "sky" },
+        workspaceLabels: ["In review"],
+      },
+    }),
+  );
+
+  await expect(assignPromise).resolves.toEqual(["In review"]);
+
+  await client.close();
+});
+
 test("createPaseoApi borrows daemon capabilities without exposing connection ownership", () => {
   const daemonClient = new DaemonClient({
     url: "ws://daemon.test",
