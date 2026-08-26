@@ -64,7 +64,7 @@ function makeProject(
 }
 
 function projectionInput(options?: {
-  groupMode?: "project" | "status";
+  groupMode?: "project" | "status" | "label";
   pinnedCollapsed?: boolean;
 }) {
   const pinned = makeWorkspace("pinned", "running");
@@ -82,6 +82,12 @@ function projectionInput(options?: {
     ]),
     projectNamesByViewKey: new Map([["project", "Project"]]),
     groupMode: options?.groupMode ?? ("project" as const),
+    labelDefinitions: [
+      { name: "Urgent", color: "red" as const },
+      { name: "Backend", color: "blue" as const },
+    ],
+    labelGroupOrder: [] as string[],
+    unlabelledLabel: "Unlabelled",
     pinnedCollapsed: options?.pinnedCollapsed ?? false,
     collapsedProjectKeys: new Set<string>(),
     collapsedWorkspaceGroupKeys: new Set<string>(),
@@ -92,7 +98,7 @@ function projectionInput(options?: {
  * Two projects, one workspace each, both labelled — so every grouping mode puts rows from more
  * than one project on screen, and a mode that asked for fewer icons than it renders would show it.
  */
-function twoProjectInput(groupMode: "project" | "status") {
+function twoProjectInput(groupMode: "project" | "status" | "label") {
   const first = makeWorkspace("first", "running", ["Urgent"], "project");
   const second = makeWorkspace("second", "needs_input", ["Backend"], "other-project");
   return {
@@ -113,7 +119,7 @@ function twoProjectInput(groupMode: "project" | "status") {
 describe("buildSidebarProjection", () => {
   // The rule that outlived the bug it was written for: a project icon is fetched per project, so
   // whatever a mode groups by, the rows it produces can only reference projects already covered.
-  for (const groupMode of ["project", "status"] as const) {
+  for (const groupMode of ["project", "status", "label"] as const) {
     it(`covers every row ${groupMode} grouping renders with a project icon target`, () => {
       const projection = buildSidebarProjection(twoProjectInput(groupMode));
       const covered = new Set(projection.projectIconTargets.map((target) => target.projectViewKey));
@@ -161,6 +167,75 @@ describe("buildSidebarProjection", () => {
     expect(projection.shortcutModel.shortcutTargets).toEqual([
       { serverId: "srv", workspaceId: "pinned" },
       { serverId: "srv", workspaceId: "unpinned" },
+    ]);
+  });
+
+  it("groups by label, repeats a multi-label workspace, and puts unlabelled last", () => {
+    const both = makeWorkspace("both", "running", ["Urgent", "Backend"]);
+    const none = makeWorkspace("none", "done", []);
+    const projection = buildSidebarProjection({
+      ...projectionInput({ groupMode: "label" }),
+      projects: [makeProject([both.placement, none.placement])],
+      pinnedKeys: { pinnedWorkspaceKeys: [], pinnedAtByKey: {} },
+      workspaceEntriesByKey: new Map([
+        [both.entry.workspaceKey, both.entry],
+        [none.entry.workspaceKey, none.entry],
+      ]),
+    });
+
+    // Alphabetical by display name — Backend before Urgent — with Unlabelled pinned to the end.
+    expect(projection.workspaceGroups.map((group) => group.key)).toEqual([
+      "label:backend",
+      "label:urgent",
+      "label:",
+    ]);
+    expect(projection.workspaceGroups[0]?.rows.map((entry) => entry.workspaceId)).toEqual(["both"]);
+    expect(projection.workspaceGroups[1]?.rows.map((entry) => entry.workspaceId)).toEqual(["both"]);
+    expect(projection.workspaceGroups[2]?.rows.map((entry) => entry.workspaceId)).toEqual(["none"]);
+    expect(projection.workspaceGroups[0]?.leading).toEqual({ kind: "label", color: "blue" });
+    expect(projection.workspaceGroups[2]?.leading).toEqual({ kind: "label", color: null });
+  });
+
+  it("renders a group for every catalog label even when nothing carries it", () => {
+    // Only Urgent is carried; Backend has no workspace but is in the catalog.
+    const urgent = makeWorkspace("urgent-only", "running", ["Urgent"]);
+    const projection = buildSidebarProjection({
+      ...projectionInput({ groupMode: "label" }),
+      projects: [makeProject([urgent.placement])],
+      pinnedKeys: { pinnedWorkspaceKeys: [], pinnedAtByKey: {} },
+      workspaceEntriesByKey: new Map([[urgent.entry.workspaceKey, urgent.entry]]),
+    });
+
+    // Backend appears with no rows; no Unlabelled group because nothing is unlabelled.
+    expect(projection.workspaceGroups.map((group) => group.key)).toEqual([
+      "label:backend",
+      "label:urgent",
+    ]);
+    expect(projection.workspaceGroups[0]?.rows).toEqual([]);
+    expect(projection.workspaceGroups[1]?.rows.map((entry) => entry.workspaceId)).toEqual([
+      "urgent-only",
+    ]);
+  });
+
+  it("applies a stored label group order and keeps unordered groups in their alphabetical slot", () => {
+    const both = makeWorkspace("both", "running", ["Urgent", "Backend"]);
+    const none = makeWorkspace("none", "done", []);
+    const projection = buildSidebarProjection({
+      ...projectionInput({ groupMode: "label" }),
+      // Drag put Urgent ahead of Backend; Unlabelled was never dragged.
+      labelGroupOrder: ["label:urgent", "label:backend"],
+      projects: [makeProject([both.placement, none.placement])],
+      pinnedKeys: { pinnedWorkspaceKeys: [], pinnedAtByKey: {} },
+      workspaceEntriesByKey: new Map([
+        [both.entry.workspaceKey, both.entry],
+        [none.entry.workspaceKey, none.entry],
+      ]),
+    });
+
+    expect(projection.workspaceGroups.map((group) => group.key)).toEqual([
+      "label:urgent",
+      "label:backend",
+      "label:",
     ]);
   });
 
