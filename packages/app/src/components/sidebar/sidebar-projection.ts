@@ -19,6 +19,7 @@ import {
   type SidebarShortcutSection,
 } from "@/utils/sidebar-shortcuts";
 import type { WorkspaceLabelDefinition } from "@getpaseo/protocol/workspace-labels";
+import { applyStoredOrdering } from "@/hooks/sidebar-workspaces-view-model";
 import {
   labelWorkspaceGroups,
   statusWorkspaceGroups,
@@ -48,6 +49,7 @@ export interface SidebarProjectionInput {
   projectNamesByViewKey: Map<string, string>;
   groupMode: SidebarGroupMode;
   labelDefinitions: readonly WorkspaceLabelDefinition[];
+  labelGroupOrder: string[];
   unlabelledLabel: string;
   pinnedCollapsed: boolean;
   collapsedProjectKeys: ReadonlySet<string>;
@@ -110,10 +112,16 @@ function buildWorkspaceGroups(
         buildStatusGroups(unpinnedWorkspaces, input.projectNamesByViewKey),
       );
     case "label":
-      return labelWorkspaceGroups({
-        workspaces: unpinnedWorkspaces,
-        labelDefinitions: input.labelDefinitions,
-        unlabelledLabel: input.unlabelledLabel,
+      // Alphabetical is the default; a manual drag order the user set overrides it in place, and
+      // labels the order predates keep their alphabetical slot until they are dragged.
+      return applyStoredOrdering({
+        items: labelWorkspaceGroups({
+          workspaces: unpinnedWorkspaces,
+          labelDefinitions: input.labelDefinitions,
+          unlabelledLabel: input.unlabelledLabel,
+        }),
+        storedOrder: input.labelGroupOrder,
+        getKey: (group) => group.key,
       });
   }
 }

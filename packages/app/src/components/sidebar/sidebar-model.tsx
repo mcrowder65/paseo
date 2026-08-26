@@ -59,6 +59,7 @@ export function SidebarModelProvider({
   );
   const pinnedCollapsed = useSidebarCollapsedSectionsStore((state) => state.collapsedPinned);
   const pinnedWorkspaceOrder = useSidebarOrderStore((state) => state.pinnedWorkspaceOrder);
+  const labelGroupOrder = useSidebarOrderStore((state) => state.labelGroupOrder);
   const toggleProjectCollapsed = useSidebarCollapsedSectionsStore(
     (state) => state.toggleProjectCollapsed,
   );
@@ -107,6 +108,7 @@ export function SidebarModelProvider({
       projectNamesByViewKey: list.projectNamesByViewKey,
       groupMode,
       labelDefinitions,
+      labelGroupOrder,
       unlabelledLabel,
       pinnedCollapsed,
       collapsedProjectKeys,
@@ -117,6 +119,7 @@ export function SidebarModelProvider({
       collapsedWorkspaceGroupKeys,
       groupMode,
       labelDefinitions,
+      labelGroupOrder,
       unlabelledLabel,
       list.projectNamesByViewKey,
       filteredProjects,
