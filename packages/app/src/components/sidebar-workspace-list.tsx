@@ -2008,6 +2008,7 @@ export function SidebarWorkspaceList({
   const content =
     groupMode !== "project" ? (
       <SidebarGroupedModeList
+        groupMode={groupMode}
         workspaceGroups={workspaceGroups}
         pinnedGroups={pinnedGroups}
         workspaceEntriesByKey={workspaceEntriesByKey}
@@ -2060,6 +2061,7 @@ export function SidebarWorkspaceList({
  * above it was status-only.
  */
 function SidebarGroupedModeList({
+  groupMode,
   workspaceGroups,
   pinnedGroups,
   workspaceEntriesByKey,
@@ -2075,6 +2077,7 @@ function SidebarGroupedModeList({
   parentGestureRef,
   dragGestureHostActive,
 }: {
+  groupMode: SidebarGroupMode;
   workspaceGroups: SidebarWorkspaceGroup[];
   pinnedGroups: PinnedSidebarGroups;
   workspaceEntriesByKey: ReadonlyMap<string, SidebarWorkspaceEntry>;
@@ -2091,6 +2094,8 @@ function SidebarGroupedModeList({
   dragGestureHostActive?: boolean;
 }) {
   const showShortcutBadges = useShowShortcutBadges();
+  const getLabelGroupOrder = useSidebarOrderStore((state) => state.getLabelGroupOrder);
+  const setLabelGroupOrder = useSidebarOrderStore((state) => state.setLabelGroupOrder);
   const pinnedWorkspaces = useMemo(
     () =>
       pinnedGroups.pinnedChats.flatMap((workspace) => {
@@ -2098,6 +2103,30 @@ function SidebarGroupedModeList({
         return entry ? [entry] : [];
       }),
     [pinnedGroups.pinnedChats, workspaceEntriesByKey],
+  );
+
+  // Only label mode reorders: status buckets have a fixed semantic order with nothing persisted.
+  const draggableGroups = groupMode === "label";
+  const handleGroupReorder = useCallback(
+    (reorderedGroups: SidebarWorkspaceGroup[]) => {
+      const reorderedGroupKeys = reorderedGroups.map((group) => group.key);
+      const currentOrder = getLabelGroupOrder();
+      if (
+        !hasVisibleOrderChanged({
+          currentOrder,
+          reorderedVisibleKeys: reorderedGroupKeys,
+        })
+      ) {
+        return;
+      }
+      setLabelGroupOrder(
+        mergeWithRemainder({
+          currentOrder,
+          reorderedVisibleKeys: reorderedGroupKeys,
+        }),
+      );
+    },
+    [getLabelGroupOrder, setLabelGroupOrder],
   );
 
   return (
@@ -2116,6 +2145,8 @@ function SidebarGroupedModeList({
       sidebarFilterEmpty={sidebarFilterEmpty}
       parentGestureRef={parentGestureRef}
       dragGestureHostActive={dragGestureHostActive}
+      draggableGroups={draggableGroups}
+      onGroupReorder={handleGroupReorder}
     />
   );
 }

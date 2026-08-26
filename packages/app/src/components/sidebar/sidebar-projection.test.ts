@@ -87,6 +87,7 @@ function projectionInput(options?: {
       { name: "Urgent", color: "red" as const },
       { name: "Backend", color: "blue" as const },
     ],
+    labelGroupOrder: [] as string[],
     unlabelledLabel: "Unlabelled",
     pinnedCollapsed: options?.pinnedCollapsed ?? false,
     collapsedProjectKeys: new Set<string>(),
@@ -195,6 +196,49 @@ describe("buildSidebarProjection", () => {
     expect(projection.workspaceGroups[2]?.rows.map((entry) => entry.workspaceId)).toEqual(["none"]);
     expect(projection.workspaceGroups[0]?.leading).toEqual({ kind: "label", color: "blue" });
     expect(projection.workspaceGroups[2]?.leading).toEqual({ kind: "label", color: null });
+  });
+
+  it("renders a group for every catalog label even when nothing carries it", () => {
+    // Only Urgent is carried; Backend has no workspace but is in the catalog.
+    const urgent = makeWorkspace("urgent-only", "running", ["Urgent"]);
+    const projection = buildSidebarProjection({
+      ...projectionInput({ groupMode: "label" }),
+      projects: [makeProject([urgent.placement])],
+      pinnedKeys: { pinnedWorkspaceKeys: [], pinnedAtByKey: {} },
+      workspaceEntriesByKey: new Map([[urgent.entry.workspaceKey, urgent.entry]]),
+    });
+
+    // Backend appears with no rows; no Unlabelled group because nothing is unlabelled.
+    expect(projection.workspaceGroups.map((group) => group.key)).toEqual([
+      "label:backend",
+      "label:urgent",
+    ]);
+    expect(projection.workspaceGroups[0]?.rows).toEqual([]);
+    expect(projection.workspaceGroups[1]?.rows.map((entry) => entry.workspaceId)).toEqual([
+      "urgent-only",
+    ]);
+  });
+
+  it("applies a stored label group order and keeps unordered groups in their alphabetical slot", () => {
+    const both = makeWorkspace("both", "running", ["Urgent", "Backend"]);
+    const none = makeWorkspace("none", "done", []);
+    const projection = buildSidebarProjection({
+      ...projectionInput({ groupMode: "label" }),
+      // Drag put Urgent ahead of Backend; Unlabelled was never dragged.
+      labelGroupOrder: ["label:urgent", "label:backend"],
+      projects: [makeProject([both.placement, none.placement])],
+      pinnedKeys: { pinnedWorkspaceKeys: [], pinnedAtByKey: {} },
+      workspaceEntriesByKey: new Map([
+        [both.entry.workspaceKey, both.entry],
+        [none.entry.workspaceKey, none.entry],
+      ]),
+    });
+
+    expect(projection.workspaceGroups.map((group) => group.key)).toEqual([
+      "label:urgent",
+      "label:backend",
+      "label:",
+    ]);
   });
 
   it("does not number pinned chats while the pinned section is collapsed", () => {

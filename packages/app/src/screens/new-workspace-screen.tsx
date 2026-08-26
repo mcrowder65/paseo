@@ -118,6 +118,7 @@ import {
 } from "./workspace/terminals/state";
 import { captureWorkspaceDraftCleanup } from "./new-workspace/background-handoff";
 import { useNewWorkspaceScreenPresence } from "./new-workspace/screen-presence";
+import { useWorkspaceLabelDefinitions, workspaceLabels } from "@/workspace-labels";
 
 function useIsNewWorkspaceDraftHandoffActive(input: {
   draftId: string | undefined;
@@ -171,6 +172,8 @@ interface NewWorkspaceScreenProps {
   projectId?: string;
   displayName?: string;
   draftId?: string;
+  /** A label to assign to the workspace once it is created (from the sidebar's label group +). */
+  initialLabel?: string;
 }
 
 // A terminal launch sends argv, not a message: there is nothing to attach and
@@ -852,6 +855,7 @@ export function NewWorkspaceScreen({
   projectId,
   displayName: displayNameProp,
   draftId,
+  initialLabel,
 }: NewWorkspaceScreenProps) {
   const queryClient = useQueryClient();
   const { t } = useTranslation();
@@ -889,6 +893,10 @@ export function NewWorkspaceScreen({
     draftId: draftId ?? generateDraftId(),
     worktreeSlug: createNameId(),
   }));
+  // The label only assigns if the selected host's catalog actually knows it; a name that host
+  // never defined resolves to nothing and the workspace is created unlabelled rather than erroring.
+  const initialLabelNames = useMemo(() => (initialLabel ? [initialLabel] : []), [initialLabel]);
+  const initialLabelDefinitions = useWorkspaceLabelDefinitions(selectedServerId, initialLabelNames);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [creationResult, setCreationResult] = useState<
     WorkspaceCreationResult | { workspace: null }
@@ -1268,12 +1276,23 @@ export function NewWorkspaceScreen({
         createFailedMessage: t("newWorkspace.errors.createWorktreeFailed"),
       });
       setCreationResult(normalizedWorkspace);
+      for (const definition of initialLabelDefinitions) {
+        void workspaceLabels
+          .setAssignment({
+            serverId: selectedServerId,
+            workspaceId: normalizedWorkspace.workspace.id,
+            label: definition,
+            assigned: true,
+          })
+          .catch(() => {});
+      }
       return normalizedWorkspace;
     },
     [
       creationIdentity,
       creationResult,
       effectiveIsolation,
+      initialLabelDefinitions,
       mergeWorkspaces,
       queryClient,
       selectedItem,

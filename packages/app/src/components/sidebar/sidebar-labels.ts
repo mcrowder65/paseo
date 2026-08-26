@@ -24,6 +24,9 @@ export interface SidebarWorkspaceGroup {
 // collapse as one.
 const LABEL_GROUP_KEY_PREFIX = "label:";
 
+/** The one label group that stands for "carries no label" — it takes no manual actions a label does. */
+export const LABEL_UNLABELLED_GROUP_KEY = `${LABEL_GROUP_KEY_PREFIX}${SIDEBAR_UNLABELLED_LABEL_KEY}`;
+
 export function statusWorkspaceGroups(groups: readonly StatusGroup[]): SidebarWorkspaceGroup[] {
   return groups.map((group) => ({
     key: group.bucket,
@@ -38,7 +41,11 @@ export function statusWorkspaceGroups(groups: readonly StatusGroup[]): SidebarWo
  *
  * A workspace with several labels appears under each of them — a label group is "everything
  * carrying this label", not a partition. Workspaces with no label fall into one Unlabelled group
- * at the end. Labels with no workspaces produce no group.
+ * at the end.
+ *
+ * Every label in the catalog gets a group even when nothing carries it, so an empty label is still
+ * a place to drop work into. Unlabelled is not a catalog label, so it only appears when a workspace
+ * actually has no label.
  *
  * Colors come from the merged catalog rather than the rows: `SidebarWorkspaceEntry.labels` is only
  * names. A label a workspace carries that the catalog has not caught up to still gets a group, with
@@ -51,14 +58,16 @@ export function labelWorkspaceGroups(input: {
 }): SidebarWorkspaceGroup[] {
   const colorByKey = new Map<string, WorkspaceLabelColor>();
   const nameByKey = new Map<string, string>();
+  // Seed a group per catalog label up front so labels with no workspaces still render.
+  const rowsByKey = new Map<string, SidebarWorkspaceEntry[]>();
   for (const definition of input.labelDefinitions) {
     const key = workspaceLabelKey(definition.name);
     if (!key || colorByKey.has(key)) continue;
     colorByKey.set(key, definition.color);
     nameByKey.set(key, definition.name);
+    rowsByKey.set(key, []);
   }
 
-  const rowsByKey = new Map<string, SidebarWorkspaceEntry[]>();
   const unlabelledRows: SidebarWorkspaceEntry[] = [];
   for (const workspace of input.workspaces) {
     const keys = new Set<string>();

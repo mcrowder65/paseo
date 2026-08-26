@@ -21,8 +21,17 @@ describe("migrateSidebarOrderState", () => {
     expect(migrated).toEqual({
       projectOrder: ["project-a"],
       pinnedWorkspaceOrder: [],
+      labelGroupOrder: [],
       workspaceOrderByProject: { "project-a": ["host-a:main", "host-a:feature", "host-b:main"] },
     });
+  });
+
+  it("normalizes label group order", () => {
+    const migrated = migrateSidebarOrderState({
+      labelGroupOrder: [" label:urgent ", "label:urgent", "", "label:backend"],
+    });
+
+    expect(migrated.labelGroupOrder).toEqual(["label:urgent", "label:backend"]);
   });
 
   it("deduplicates pinned workspace order without rewriting identities", () => {
