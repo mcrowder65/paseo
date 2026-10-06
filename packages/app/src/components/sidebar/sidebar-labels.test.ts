@@ -3,9 +3,14 @@ import type { SidebarWorkspaceEntry } from "@/hooks/use-sidebar-workspaces-list"
 import { SIDEBAR_UNLABELLED_LABEL_KEY } from "@/stores/sidebar-view-store";
 import { applyStoredOrdering } from "@/hooks/sidebar-workspaces-view-model";
 import {
+  applyPendingLabelBoardMoves,
+  buildLabelBoardItems,
   filterWorkspacesByLabels,
+  LABEL_UNLABELLED_GROUP_KEY,
   labelWorkspaceGroups,
   orderLabelsLikeSidebar,
+  resolveLabelBoardDrop,
+  type LabelBoardItem,
 } from "./sidebar-labels";
 
 function workspace(
@@ -108,5 +113,85 @@ describe("orderLabelsLikeSidebar", () => {
       "In Review",
       "To Do",
     ]);
+  });
+});
+
+describe("label board", () => {
+  const definitions = [
+    { name: "Doing", color: "amber" as const },
+    { name: "Done", color: "emerald" as const },
+  ];
+  const a = workspace("a", ["Doing"]);
+  const b = workspace("b", ["Doing"]);
+  const c = workspace("c", ["Done"]);
+  const loose = workspace("loose", []);
+  const groups = labelWorkspaceGroups({
+    workspaces: [a, b, c, loose],
+    labelDefinitions: definitions,
+    unlabelledLabel: "Unlabelled",
+  });
+  const neverCollapsed = () => false;
+
+  function itemKeys(items: readonly LabelBoardItem[]): string[] {
+    return items.map((item) => item.key);
+  }
+
+  function moveItem(items: LabelBoardItem[], from: number, to: number): LabelBoardItem[] {
+    const next = [...items];
+    const [moved] = next.splice(from, 1);
+    if (moved) next.splice(to, 0, moved);
+    return next;
+  }
+
+  test("flattens groups into headers followed by their rows, skipping collapsed rows", () => {
+    const items = buildLabelBoardItems(groups, (group) => group.key === "label:done");
+    expect(itemKeys(items)).toEqual([
+      "header:label:doing",
+      "label:doing|host:a",
+      "label:doing|host:b",
+      "header:label:done",
+      `header:${LABEL_UNLABELLED_GROUP_KEY}`,
+      `${LABEL_UNLABELLED_GROUP_KEY}|host:loose`,
+    ]);
+  });
+
+  test("a row dropped under another header moves to that label and takes its place there", () => {
+    const items = buildLabelBoardItems(groups, neverCollapsed);
+    // Drag b from under Doing to just below the Done header, above c.
+    const dropped = moveItem(items, 2, 3);
+    const drop = resolveLabelBoardDrop(dropped);
+
+    expect(drop.moves).toEqual([
+      { workspace: b, fromGroupKey: "label:doing", toGroupKey: "label:done" },
+    ]);
+    expect(drop.rowOrderByGroup.get("label:done")).toEqual(["host:b", "host:c"]);
+    expect(drop.rowOrderByGroup.get("label:doing")).toEqual(["host:a"]);
+  });
+
+  test("reordering within a group is not a move", () => {
+    const items = buildLabelBoardItems(groups, neverCollapsed);
+    const drop = resolveLabelBoardDrop(moveItem(items, 2, 1));
+    expect(drop.moves).toEqual([]);
+    expect(drop.rowOrderByGroup.get("label:doing")).toEqual(["host:b", "host:a"]);
+  });
+
+  test("a row dropped above every header belongs to the first group", () => {
+    const items = buildLabelBoardItems(groups, neverCollapsed);
+    const drop = resolveLabelBoardDrop(moveItem(items, 4, 0));
+    expect(drop.moves).toEqual([
+      { workspace: c, fromGroupKey: "label:done", toGroupKey: "label:doing" },
+    ]);
+  });
+
+  test("pending moves show the row under its new header in the stored order", () => {
+    const displayed = applyPendingLabelBoardMoves({
+      groups,
+      moves: [{ workspace: b, fromGroupKey: "label:doing", toGroupKey: "label:done" }],
+      workspaceOrderByLabelGroup: { "label:done": ["host:b", "host:c"] },
+    });
+    const rowsOf = (key: string) =>
+      displayed.find((group) => group.key === key)?.rows.map((row) => row.workspaceId);
+    expect(rowsOf("label:doing")).toEqual(["a"]);
+    expect(rowsOf("label:done")).toEqual(["b", "c"]);
   });
 });

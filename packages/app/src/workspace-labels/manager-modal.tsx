@@ -7,6 +7,7 @@ import {
   type ReactElement,
 } from "react";
 import { Pressable, Text, View, type PressableStateCallbackType } from "react-native";
+import type { Ref } from "react";
 import { Pencil } from "lucide-react-native";
 import { StyleSheet, withUnistyles } from "react-native-unistyles";
 import {
@@ -22,8 +23,11 @@ import { Field, FormTextInput } from "@/components/ui/form-field";
 import { useIsCompactFormFactor } from "@/constants/layout";
 import { isNative } from "@/constants/platform";
 import { useHosts } from "@/runtime/host-runtime";
-import { orderLabelsLikeSidebar } from "@/components/sidebar/sidebar-labels";
+import { labelGroupKey, orderLabelsLikeSidebar } from "@/components/sidebar/sidebar-labels";
+import { DraggableList, type DraggableRenderItemInfo } from "@/components/draggable-list";
+import type { DraggableListDragHandleProps } from "@/components/draggable-list.types";
 import { useSidebarOrderStore } from "@/stores/sidebar-order-store";
+import { mergeWithRemainder } from "@/utils/sidebar-reorder";
 import type { Theme } from "@/styles/theme";
 import { confirmDialog } from "@/utils/confirm-dialog";
 import {
@@ -62,6 +66,7 @@ export function WorkspaceLabelManagerModal({
   const hosts = useHosts();
   const { hosts: labelHosts } = useWorkspaceLabelProjection();
   const labelGroupOrder = useSidebarOrderStore((state) => state.labelGroupOrder);
+  const setLabelGroupOrder = useSidebarOrderStore((state) => state.setLabelGroupOrder);
   const snapshots = useMemo(
     () => Object.fromEntries(labelHosts.map((host) => [host.serverId, host])),
     [labelHosts],
@@ -119,6 +124,39 @@ export function WorkspaceLabelManagerModal({
       }),
     );
   }, [editing, model, t]);
+
+  // The list is the sidebar's group order, so dragging here reorders the sidebar's label groups.
+  // A filtered list hides labels the new order would have to place blind, so search turns it off.
+  const canReorder = state.query.trim() === "" && state.labels.length > 1;
+  const reorder = useCallback(
+    (labels: WorkspaceLabelDefinition[]) => {
+      setLabelGroupOrder(
+        mergeWithRemainder({
+          currentOrder: useSidebarOrderStore.getState().labelGroupOrder,
+          reorderedVisibleKeys: labels.map((label) => labelGroupKey(label.name)),
+        }),
+      );
+    },
+    [setLabelGroupOrder],
+  );
+  const renderDraggableLabel = useCallback(
+    ({
+      item: label,
+      drag,
+      isActive,
+      dragHandleProps,
+    }: DraggableRenderItemInfo<WorkspaceLabelDefinition>) => (
+      <WorkspaceLabelManagerRow
+        label={label}
+        disabled={disabled}
+        onEdit={edit}
+        drag={drag}
+        isDragging={isActive}
+        dragHandleProps={dragHandleProps}
+      />
+    ),
+    [disabled, edit],
+  );
 
   const isEditing = draft !== null;
   // Search belongs to the sheet's header, where it spans the header's own rails and needs no
@@ -201,14 +239,26 @@ export function WorkspaceLabelManagerModal({
             />
           ) : null}
           <View style={styles.list}>
-            {state.labels.map((label) => (
-              <WorkspaceLabelManagerRow
-                key={workspaceLabelKey(label.name)}
-                label={label}
-                disabled={disabled}
-                onEdit={edit}
+            {canReorder ? (
+              <DraggableList
+                testID="workspace-label-manager-list"
+                data={state.labels}
+                keyExtractor={labelKeyExtractor}
+                renderItem={renderDraggableLabel}
+                onDragEnd={reorder}
+                scrollEnabled={false}
+                useDragHandle
               />
-            ))}
+            ) : (
+              state.labels.map((label) => (
+                <WorkspaceLabelManagerRow
+                  key={workspaceLabelKey(label.name)}
+                  label={label}
+                  disabled={disabled}
+                  onEdit={edit}
+                />
+              ))
+            )}
             {state.labels.length === 0 ? (
               <Text style={styles.muted}>{t("workspaceLabels.manage.empty")}</Text>
             ) : null}
@@ -232,6 +282,10 @@ export function WorkspaceLabelManagerModal({
 
 const managerHostOptionTestID = (serverId: string) => `workspace-label-manager-host-${serverId}`;
 
+function labelKeyExtractor(label: WorkspaceLabelDefinition): string {
+  return workspaceLabelKey(label.name);
+}
+
 /**
  * One label: its colour, its name, and the pencil that opens it.
  *
@@ -243,10 +297,16 @@ function WorkspaceLabelManagerRow({
   label,
   disabled,
   onEdit,
+  drag,
+  isDragging = false,
+  dragHandleProps,
 }: {
   label: WorkspaceLabelDefinition;
   disabled: boolean;
   onEdit: (label: WorkspaceLabelDefinition) => void;
+  drag?: () => void;
+  isDragging?: boolean;
+  dragHandleProps?: DraggableListDragHandleProps;
 }): ReactElement {
   const { t } = useTranslation();
   const isCompact = useIsCompactFormFactor();
@@ -264,17 +324,30 @@ function WorkspaceLabelManagerRow({
     [revealed],
   );
 
+  const {
+    role: _dragRole,
+    tabIndex: _dragTabIndex,
+    "aria-roledescription": _dragRoleDescription,
+    ...dragAttributes
+  } = dragHandleProps?.attributes ?? {};
+
   return (
     <View
-      style={styles.row}
+      {...dragAttributes}
+      {...dragHandleProps?.listeners}
+      ref={dragHandleProps?.setActivatorNodeRef as unknown as Ref<View>}
+      style={[styles.row, isDragging && styles.rowDragging]}
       onPointerEnter={handlePointerEnter}
       onPointerLeave={handlePointerLeave}
       testID={`workspace-label-manager-label-${label.name}`}
     >
-      <WorkspaceLabelDot color={label.color} />
-      <Text style={styles.rowName} numberOfLines={1}>
-        {label.name}
-      </Text>
+      {/* Native drags on long-press; web drags from the row through the handle props above. */}
+      <Pressable style={styles.rowGrip} onLongPress={drag} disabled={!drag}>
+        <WorkspaceLabelDot color={label.color} />
+        <Text style={styles.rowName} numberOfLines={1}>
+          {label.name}
+        </Text>
+      </Pressable>
       <Pressable
         accessibilityRole="button"
         accessibilityLabel={t("workspaceLabels.manage.editLabel", { name: label.name })}
@@ -359,6 +432,16 @@ const styles = StyleSheet.create((theme) => ({
     alignItems: "center",
     gap: theme.spacing[2],
     minHeight: 32,
+  },
+  rowDragging: {
+    backgroundColor: theme.colors.surface2,
+  },
+  rowGrip: {
+    flex: 1,
+    minWidth: 0,
+    flexDirection: "row",
+    alignItems: "center",
+    gap: theme.spacing[2],
   },
   rowName: {
     flex: 1,

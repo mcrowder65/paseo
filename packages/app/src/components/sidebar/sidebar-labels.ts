@@ -28,7 +28,7 @@ const LABEL_GROUP_KEY_PREFIX = "label:";
 /** The one label group that stands for "carries no label" — it takes no manual actions a label does. */
 export const LABEL_UNLABELLED_GROUP_KEY = `${LABEL_GROUP_KEY_PREFIX}${SIDEBAR_UNLABELLED_LABEL_KEY}`;
 
-function labelGroupKey(name: string): string {
+export function labelGroupKey(name: string): string {
   return `${LABEL_GROUP_KEY_PREFIX}${workspaceLabelKey(name)}`;
 }
 
@@ -167,4 +167,116 @@ export function filterWorkspacesByLabels(
       key === SIDEBAR_UNLABELLED_LABEL_KEY ? keys.size === 0 : keys.has(key);
     return labels.some(matches);
   });
+}
+
+/** One entry in the Labels-mode drag list: a group header, or a workspace under one. */
+export type LabelBoardItem =
+  | { kind: "header"; key: string; group: SidebarWorkspaceGroup; collapsed: boolean }
+  | {
+      kind: "row";
+      key: string;
+      groupKey: string;
+      workspace: SidebarWorkspaceEntry;
+      lastInGroup: boolean;
+    };
+
+/**
+ * Flattens label groups into one list so a row can be dropped under any header.
+ *
+ * Row keys carry the group key: a workspace still carrying several labels appears under each, and
+ * the list needs a distinct key for every copy.
+ */
+export function buildLabelBoardItems(
+  groups: readonly SidebarWorkspaceGroup[],
+  isCollapsed: (group: SidebarWorkspaceGroup) => boolean,
+): LabelBoardItem[] {
+  const items: LabelBoardItem[] = [];
+  for (const group of groups) {
+    const collapsed = isCollapsed(group);
+    items.push({ kind: "header", key: `header:${group.key}`, group, collapsed });
+    if (collapsed) continue;
+    group.rows.forEach((workspace, index) => {
+      items.push({
+        kind: "row",
+        key: `${group.key}|${workspace.workspaceKey}`,
+        groupKey: group.key,
+        workspace,
+        lastInGroup: index === group.rows.length - 1,
+      });
+    });
+  }
+  return items;
+}
+
+export interface LabelBoardMove {
+  workspace: SidebarWorkspaceEntry;
+  fromGroupKey: string;
+  toGroupKey: string;
+}
+
+export interface LabelBoardDrop {
+  moves: LabelBoardMove[];
+  /** Workspace keys in their dropped order, for every group that ended up with rows. */
+  rowOrderByGroup: Map<string, string[]>;
+}
+
+/**
+ * Reads a dropped list back into label changes: every row belongs to the nearest header above it.
+ * A row dropped above every header belongs to the first one.
+ */
+export function resolveLabelBoardDrop(items: readonly LabelBoardItem[]): LabelBoardDrop {
+  const firstHeader = items.find((item) => item.kind === "header");
+  let currentGroupKey = firstHeader?.kind === "header" ? firstHeader.group.key : null;
+  const moves: LabelBoardMove[] = [];
+  const rowOrderByGroup = new Map<string, string[]>();
+  for (const item of items) {
+    if (item.kind === "header") {
+      currentGroupKey = item.group.key;
+      continue;
+    }
+    if (currentGroupKey === null) continue;
+    if (item.groupKey !== currentGroupKey) {
+      moves.push({
+        workspace: item.workspace,
+        fromGroupKey: item.groupKey,
+        toGroupKey: currentGroupKey,
+      });
+    }
+    const order = rowOrderByGroup.get(currentGroupKey) ?? [];
+    order.push(item.workspace.workspaceKey);
+    rowOrderByGroup.set(currentGroupKey, order);
+  }
+  return { moves, rowOrderByGroup };
+}
+
+/**
+ * Shows dropped rows under their new header while the label change is still on its way to the
+ * daemon, so the list does not snap back for a round trip.
+ */
+export function applyPendingLabelBoardMoves(input: {
+  groups: readonly SidebarWorkspaceGroup[];
+  moves: readonly LabelBoardMove[];
+  workspaceOrderByLabelGroup: Readonly<Record<string, string[]>>;
+}): SidebarWorkspaceGroup[] {
+  if (input.moves.length === 0) return [...input.groups];
+  const rowsByGroup = new Map(input.groups.map((group) => [group.key, [...group.rows]]));
+  for (const move of input.moves) {
+    const from = rowsByGroup.get(move.fromGroupKey);
+    const to = rowsByGroup.get(move.toGroupKey);
+    if (!from || !to) continue;
+    const index = from.findIndex((row) => row.workspaceKey === move.workspace.workspaceKey);
+    if (index >= 0) from.splice(index, 1);
+    if (!to.some((row) => row.workspaceKey === move.workspace.workspaceKey)) {
+      to.push(move.workspace);
+    }
+  }
+  return input.groups.map((group) =>
+    Object.assign({}, group, {
+      rows: applyStoredOrdering({
+        items: rowsByGroup.get(group.key) ?? group.rows,
+        storedOrder: input.workspaceOrderByLabelGroup[group.key] ?? [],
+        getKey: (row) => row.workspaceKey,
+      }),
+    }),
+  );
 }
