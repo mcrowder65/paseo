@@ -34,6 +34,8 @@ import {
   type WorkspaceLabelPickerRow,
 } from "@/workspace-labels";
 import type { Theme } from "@/styles/theme";
+import { orderLabelsLikeSidebar } from "@/components/sidebar/sidebar-labels";
+import { useSidebarOrderStore } from "@/stores/sidebar-order-store";
 import { WorkspaceLabelDot, WorkspaceLabelSwatchRow } from "./swatch";
 
 /** The `MenuSubTrigger` on a workspace's menu that opens the assign page. */
@@ -103,8 +105,8 @@ export function useWorkspaceLabelMenuPages(
 /**
  * Every label on the host, with the ones this workspace carries ticked.
  *
- * Assigning is multi-select, so a press toggles and nothing closes; the menu ends when it is
- * dismissed. Assignment is the trailing check `MenuItem` already draws for a chosen row, and the
+ * A workspace carries one label, so a press moves the check to that row (or clears it) and nothing
+ * closes; the menu ends when it is dismissed. Assignment is the trailing check `MenuItem` already draws for a chosen row, and the
  * colour goes in the leading slot, which puts both on the rails every other row in the menu uses.
  */
 function WorkspaceLabelPickerPage({
@@ -117,7 +119,12 @@ function WorkspaceLabelPickerPage({
   assignedLabels: readonly string[];
 }): ReactElement {
   const { t } = useTranslation();
-  const { labels, targetHost: host } = useWorkspaceLabelProjection(serverId);
+  const { labels: catalog, targetHost: host } = useWorkspaceLabelProjection(serverId);
+  const labelGroupOrder = useSidebarOrderStore((state) => state.labelGroupOrder);
+  const labels = useMemo(
+    () => orderLabelsLikeSidebar(catalog, labelGroupOrder),
+    [catalog, labelGroupOrder],
+  );
   const model = useMemo(
     () =>
       createWorkspaceLabelPickerModel({

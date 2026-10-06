@@ -1,7 +1,12 @@
 import { describe, expect, test } from "vitest";
 import type { SidebarWorkspaceEntry } from "@/hooks/use-sidebar-workspaces-list";
 import { SIDEBAR_UNLABELLED_LABEL_KEY } from "@/stores/sidebar-view-store";
-import { filterWorkspacesByLabels } from "./sidebar-labels";
+import { applyStoredOrdering } from "@/hooks/sidebar-workspaces-view-model";
+import {
+  filterWorkspacesByLabels,
+  labelWorkspaceGroups,
+  orderLabelsLikeSidebar,
+} from "./sidebar-labels";
 
 function workspace(
   workspaceId: string,
@@ -65,5 +70,43 @@ describe("sidebar label filtering", () => {
         labels: [SIDEBAR_UNLABELLED_LABEL_KEY],
       }).map((entry) => entry.workspaceId),
     ).toEqual(["blank"]);
+  });
+});
+
+describe("orderLabelsLikeSidebar", () => {
+  const labels = [
+    { name: "In Review", color: "violet" as const },
+    { name: "Backlog", color: "violet" as const },
+    { name: "To Do", color: "violet" as const },
+    { name: "In Progress", color: "violet" as const },
+    { name: "Done", color: "violet" as const },
+  ];
+
+  test("matches the sidebar's label group order, including a manual drag order", () => {
+    const labelGroupOrder = ["label:done", "label:in review", "label:in progress", "label:to do"];
+    const sidebarOrder = applyStoredOrdering({
+      items: labelWorkspaceGroups({
+        workspaces: [],
+        labelDefinitions: labels,
+        unlabelledLabel: "Unlabelled",
+      }),
+      storedOrder: labelGroupOrder,
+      getKey: (group) => group.key,
+    }).map((group) => group.label);
+
+    const listOrder = orderLabelsLikeSidebar(labels, labelGroupOrder).map((label) => label.name);
+
+    expect(listOrder).toEqual(["Backlog", "Done", "In Review", "In Progress", "To Do"]);
+    expect(listOrder).toEqual(sidebarOrder);
+  });
+
+  test("falls back to alphabetical with no stored order", () => {
+    expect(orderLabelsLikeSidebar(labels, []).map((label) => label.name)).toEqual([
+      "Backlog",
+      "Done",
+      "In Progress",
+      "In Review",
+      "To Do",
+    ]);
   });
 });

@@ -22,6 +22,8 @@ import { Field, FormTextInput } from "@/components/ui/form-field";
 import { useIsCompactFormFactor } from "@/constants/layout";
 import { isNative } from "@/constants/platform";
 import { useHosts } from "@/runtime/host-runtime";
+import { orderLabelsLikeSidebar } from "@/components/sidebar/sidebar-labels";
+import { useSidebarOrderStore } from "@/stores/sidebar-order-store";
 import type { Theme } from "@/styles/theme";
 import { confirmDialog } from "@/utils/confirm-dialog";
 import {
@@ -59,6 +61,7 @@ export function WorkspaceLabelManagerModal({
   const { t } = useTranslation();
   const hosts = useHosts();
   const { hosts: labelHosts } = useWorkspaceLabelProjection();
+  const labelGroupOrder = useSidebarOrderStore((state) => state.labelGroupOrder);
   const snapshots = useMemo(
     () => Object.fromEntries(labelHosts.map((host) => [host.serverId, host])),
     [labelHosts],
@@ -83,11 +86,11 @@ export function WorkspaceLabelManagerModal({
         serverId: host.serverId,
         label: host.label || host.serverId,
         status: snapshots[host.serverId]?.status ?? "offline",
-        labels: snapshots[host.serverId]?.labels ?? [],
+        labels: orderLabelsLikeSidebar(snapshots[host.serverId]?.labels ?? [], labelGroupOrder),
         error: snapshots[host.serverId]?.error,
       })),
     );
-  }, [hosts, model, snapshots, visible]);
+  }, [hosts, labelGroupOrder, model, snapshots, visible]);
   const state = useSyncExternalStore(model.subscribe, model.snapshot, model.snapshot);
   const draft = state.draft;
   const editing = state.editing;

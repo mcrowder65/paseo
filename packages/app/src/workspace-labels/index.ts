@@ -207,7 +207,23 @@ class WorkspaceLabelsController {
     label: WorkspaceLabelDefinition;
     assigned: boolean;
   }) {
-    return this.mutate(input.serverId, (client) => client.setWorkspaceLabel(input));
+    const result = await this.mutate(input.serverId, (client) => client.setWorkspaceLabel(input));
+    if (!input.assigned) return result;
+    // A workspace carries at most one label. Assign first, then drop the rest, so the workspace
+    // never passes through Unlabelled on the way.
+    const key = workspaceLabelKey(input.label.name);
+    let latest = result;
+    for (const name of result.workspaceLabels) {
+      if (workspaceLabelKey(name) === key) continue;
+      latest = await this.mutate(input.serverId, (client) =>
+        client.setWorkspaceLabel({
+          workspaceId: input.workspaceId,
+          label: { name, color: input.label.color },
+          assigned: false,
+        }),
+      );
+    }
+    return latest;
   }
 
   async update(input: {

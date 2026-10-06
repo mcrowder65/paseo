@@ -70,6 +70,8 @@ import {
 import { useOpenKebabMenuVisibility } from "@/components/sidebar/use-open-kebab-menu-visibility";
 import { getSidebarRowBackdrop } from "@/components/sidebar/sidebar-row-backdrop";
 import { getStatusDotColor } from "@/utils/status-dot-color";
+import { shouldRenderSyncedStatusLoader } from "@/utils/status-loader";
+import { StatusRing } from "@/components/status-ring";
 import { selectWorkspaceServiceSummary } from "@/components/sidebar/workspace-meta-row";
 import {
   SidebarWorkspaceTrailingContent,
@@ -301,6 +303,15 @@ function groupKeyExtractor(group: SidebarWorkspaceGroup): string {
   return group.key;
 }
 
+// An empty group always reads as collapsed, whatever its persisted state: there is nothing to
+// expand, and an expanded empty group leaves a gap under its header.
+function isGroupCollapsed(
+  group: SidebarWorkspaceGroup,
+  collapsedWorkspaceGroupKeys: ReadonlySet<string>,
+): boolean {
+  return group.rows.length === 0 || collapsedWorkspaceGroupKeys.has(group.key);
+}
+
 function StatusGroupList({
   groups,
   collapsedWorkspaceGroupKeys,
@@ -339,7 +350,7 @@ function StatusGroupList({
     }: DraggableRenderItemInfo<SidebarWorkspaceGroup>) => (
       <StatusGroupRows
         group={group}
-        collapsed={collapsedWorkspaceGroupKeys.has(group.key)}
+        collapsed={isGroupCollapsed(group, collapsedWorkspaceGroupKeys)}
         projectIconByProjectViewKey={projectIconByProjectViewKey}
         shortcutIndex={shortcutIndex}
         showShortcutBadges={showShortcutBadges}
@@ -387,7 +398,7 @@ function StatusGroupList({
         <StatusGroupRows
           key={group.key}
           group={group}
-          collapsed={collapsedWorkspaceGroupKeys.has(group.key)}
+          collapsed={isGroupCollapsed(group, collapsedWorkspaceGroupKeys)}
           projectIconByProjectViewKey={projectIconByProjectViewKey}
           shortcutIndex={shortcutIndex}
           showShortcutBadges={showShortcutBadges}
@@ -596,6 +607,7 @@ function StatusGroupHeaderContent({
           <View style={styles.statusGroupLeadingVisualSlot}>
             <StatusGroupLeadingVisual
               leading={group.leading}
+              running={isLabelGroupRunning(group)}
               collapsed={collapsed}
               showChevron={isHovered}
             />
@@ -654,17 +666,27 @@ function LabelGroupNewWorkspaceButton({ labelName }: { labelName: string }) {
   );
 }
 
+// Status mode already has a Running bucket, so only label groups borrow the row's busy ring.
+function isLabelGroupRunning(group: SidebarWorkspaceGroup): boolean {
+  return (
+    group.leading.kind === "label" &&
+    group.rows.some((row) => shouldRenderSyncedStatusLoader({ bucket: row.statusBucket }))
+  );
+}
+
 function StatusGroupLeadingVisual({
   leading,
+  running,
   collapsed,
   showChevron,
 }: {
   leading: SidebarWorkspaceGroup["leading"];
+  running: boolean;
   collapsed: boolean;
   showChevron: boolean;
 }) {
   if (!showChevron) {
-    return <SidebarGroupLeadingIcon leading={leading} />;
+    return running ? <StatusRing /> : <SidebarGroupLeadingIcon leading={leading} />;
   }
   if (collapsed) {
     return <ThemedChevronRight uniProps={mutedGroupIconProps} />;

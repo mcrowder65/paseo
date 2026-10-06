@@ -6,6 +6,7 @@ import {
 import type { SidebarWorkspaceEntry } from "@/hooks/use-sidebar-workspaces-list";
 import { SIDEBAR_UNLABELLED_LABEL_KEY, type SidebarLabelFilter } from "@/stores/sidebar-view-store";
 import type { StatusBucket, StatusGroup } from "@/hooks/sidebar-status-view-model";
+import { applyStoredOrdering } from "@/hooks/sidebar-workspaces-view-model";
 
 export type SidebarWorkspaceGroupLeading =
   | { kind: "status"; bucket: StatusBucket }
@@ -26,6 +27,29 @@ const LABEL_GROUP_KEY_PREFIX = "label:";
 
 /** The one label group that stands for "carries no label" — it takes no manual actions a label does. */
 export const LABEL_UNLABELLED_GROUP_KEY = `${LABEL_GROUP_KEY_PREFIX}${SIDEBAR_UNLABELLED_LABEL_KEY}`;
+
+function labelGroupKey(name: string): string {
+  return `${LABEL_GROUP_KEY_PREFIX}${workspaceLabelKey(name)}`;
+}
+
+function compareLabelNames(a: string, b: string): number {
+  return a.localeCompare(b);
+}
+
+/**
+ * Labels in the order the sidebar's Labels grouping shows them. Every list of labels goes through
+ * this so dragging a group in the sidebar reorders the label lists too.
+ */
+export function orderLabelsLikeSidebar<T extends { name: string }>(
+  labels: readonly T[],
+  labelGroupOrder: string[],
+): T[] {
+  return applyStoredOrdering({
+    items: [...labels].sort((a, b) => compareLabelNames(a.name, b.name)),
+    storedOrder: labelGroupOrder,
+    getKey: (label) => labelGroupKey(label.name),
+  });
+}
 
 export function statusWorkspaceGroups(groups: readonly StatusGroup[]): SidebarWorkspaceGroup[] {
   return groups.map((group) => ({
@@ -92,12 +116,12 @@ export function labelWorkspaceGroups(input: {
   }
 
   const groups: SidebarWorkspaceGroup[] = [...rowsByKey.keys()]
-    .sort((a, b) => (nameByKey.get(a) ?? a).localeCompare(nameByKey.get(b) ?? b))
+    .sort((a, b) => compareLabelNames(nameByKey.get(a) ?? a, nameByKey.get(b) ?? b))
     .map((key) => {
       const rows = rowsByKey.get(key) ?? [];
       rows.sort(compareLabelRows);
       return {
-        key: `${LABEL_GROUP_KEY_PREFIX}${key}`,
+        key: labelGroupKey(key),
         label: nameByKey.get(key) ?? key,
         rows,
         leading: { kind: "label", color: colorByKey.get(key) ?? null },
