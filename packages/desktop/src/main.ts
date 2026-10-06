@@ -725,10 +725,6 @@ async function createWindow(
     browserKeyboard.detachHost(webContentsId);
   });
 
-  if (devWorktreeName) {
-    app.dock?.setBadge(devWorktreeName);
-  }
-
   if (restoredWindowState?.isMaximized) {
     mainWindow.maximize();
   }

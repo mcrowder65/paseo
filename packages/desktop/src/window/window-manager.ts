@@ -178,20 +178,8 @@ export function registerWindowManager(input: { mode: DesktopWindowChromeMode }):
     BrowserWindow.fromWebContents(event.sender)?.setFullScreen(fullscreen);
   });
 
-  ipcMain.handle("paseo:window:setBadgeCount", (_event, count?: unknown) => {
-    if (process.platform === "darwin" || process.platform === "linux") {
-      const badgeCount = readBadgeCount(count);
-      try {
-        app.setBadgeCount(badgeCount);
-      } catch (error) {
-        console.warn("[window-manager] Failed to update badge count", {
-          count,
-          badgeCount,
-          error,
-        });
-      }
-    }
-  });
+  // labels-client: no dock badge. The handler stays so the renderer's invoke still resolves.
+  ipcMain.handle("paseo:window:setBadgeCount", () => undefined);
 
   ipcMain.handle("paseo:window:updateChrome", (event, update?: unknown) => {
     const win = BrowserWindow.fromWebContents(event.sender);
