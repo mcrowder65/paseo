@@ -1,4 +1,3 @@
-import { useTranslation } from "react-i18next";
 import React, { createContext, useContext, useEffect, useMemo, type ReactNode } from "react";
 import { useTranslation } from "react-i18next";
 import {
@@ -64,7 +63,6 @@ export function SidebarModelProvider({
   const projectFilters = useSidebarViewStore((state) => state.projectFilters);
   const reconcileLabelFilter = useSidebarViewStore((state) => state.reconcileLabelFilter);
   const { hosts: labelHosts, labels: labelDefinitions } = useWorkspaceLabelProjection();
-  const { t } = useTranslation();
   const unlabelledLabel = t("workspaceLabels.unlabelled");
   const collapsedProjectKeys = useSidebarCollapsedSectionsStore(
     (state) => state.collapsedProjectKeys,
