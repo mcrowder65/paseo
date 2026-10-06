@@ -283,6 +283,16 @@ interface WorkspaceCreationResult {
   agent?: AgentSnapshotPayload;
 }
 
+// The create payload is the workspace as it was before its label was assigned, so merging it as-is
+// would put a just-labelled workspace back into Unlabelled.
+function withInitialLabels<T extends { labels?: string[] }>(
+  workspace: T,
+  initialLabels: readonly string[],
+): T {
+  if (initialLabels.length === 0 || (workspace.labels?.length ?? 0) > 0) return workspace;
+  return { ...workspace, labels: [...initialLabels] };
+}
+
 async function createMultiplicityWorkspace(input: {
   idempotencyKey: string;
   worktreeSlug: string;
@@ -302,6 +312,7 @@ async function createMultiplicityWorkspace(input: {
   ) => void;
   serverId: string;
   createFailedMessage: string;
+  initialLabels: readonly string[];
 }): Promise<WorkspaceCreationResult> {
   const projectId = getHostProjectId(input.project, input.serverId);
   if (!projectId) throw new Error("Project is not available on the selected host");
@@ -332,7 +343,10 @@ async function createMultiplicityWorkspace(input: {
   if (payload.error || !payload.workspace) {
     throw new Error(payload.error ?? input.createFailedMessage);
   }
-  const normalizedWorkspace = normalizeWorkspaceDescriptor(payload.workspace);
+  const normalizedWorkspace = withInitialLabels(
+    normalizeWorkspaceDescriptor(payload.workspace),
+    input.initialLabels,
+  );
   const workspaceForInitialMerge = input.withInitialAgent
     ? { ...normalizedWorkspace, status: "running" as const, statusEnteredAt: new Date() }
     : normalizedWorkspace;
@@ -1244,6 +1258,24 @@ export function NewWorkspaceScreen({
         throw new Error("Choose a host for this project");
       }
       const connectedClient = withConnectedClient();
+      const initialLabelNamesToShow = initialLabelDefinitions.map((definition) => definition.name);
+      let initialLabelsAssigned = false;
+      // Assign on the first creation event that names the workspace. Waiting for the create call to
+      // return means waiting for the agent and prompt, and the workspace sits in Unlabelled meanwhile.
+      const assignInitialLabels = (workspaceId: string) => {
+        if (initialLabelsAssigned) return;
+        initialLabelsAssigned = true;
+        for (const definition of initialLabelDefinitions) {
+          void workspaceLabels
+            .setAssignment({
+              serverId: selectedServerId,
+              workspaceId,
+              label: definition,
+              assigned: true,
+            })
+            .catch(() => {});
+        }
+      };
       const createsWorktree = !supportsWorkspaceMultiplicity || effectiveIsolation === "worktree";
       const checkoutStatusForCreate = createsWorktree
         ? await ensureCheckoutStatus({
@@ -1270,22 +1302,24 @@ export function NewWorkspaceScreen({
         prompt: input.prompt,
         attachments: input.attachments,
         agent: input.agent,
-        onEvent: input.onEvent,
+        onEvent: (snapshot) => {
+          if (snapshot.workspace) {
+            assignInitialLabels(snapshot.workspace.id);
+            input.onEvent?.({
+              ...snapshot,
+              workspace: withInitialLabels(snapshot.workspace, initialLabelNamesToShow),
+            });
+            return;
+          }
+          input.onEvent?.(snapshot);
+        },
         mergeWorkspaces,
         serverId: selectedServerId,
         createFailedMessage: t("newWorkspace.errors.createWorktreeFailed"),
+        initialLabels: initialLabelNamesToShow,
       });
       setCreationResult(normalizedWorkspace);
-      for (const definition of initialLabelDefinitions) {
-        void workspaceLabels
-          .setAssignment({
-            serverId: selectedServerId,
-            workspaceId: normalizedWorkspace.workspace.id,
-            label: definition,
-            assigned: true,
-          })
-          .catch(() => {});
-      }
+      assignInitialLabels(normalizedWorkspace.workspace.id);
       return normalizedWorkspace;
     },
     [
