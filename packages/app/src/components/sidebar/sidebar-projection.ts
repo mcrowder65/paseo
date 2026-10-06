@@ -51,6 +51,7 @@ export interface SidebarProjectionInput {
   groupMode: SidebarGroupMode;
   labelDefinitions: readonly WorkspaceLabelDefinition[];
   labelGroupOrder: string[];
+  workspaceOrderByLabelGroup: Readonly<Record<string, string[]>>;
   unlabelledLabel: string;
   pinnedCollapsed: boolean;
   collapsedProjectKeys: ReadonlySet<string>;
@@ -113,17 +114,26 @@ function buildWorkspaceGroups(
       return statusWorkspaceGroups(
         buildStatusGroups(unpinnedWorkspaces, input.projectNamesByViewKey, input.t),
       );
-    case "label":
-      // Alphabetical is the default; a manual drag order the user set overrides it in place, and
-      // labels the order predates keep their alphabetical slot until they are dragged.
+    case "label": {
+      // Alphabetical is the default for both groups and the rows inside them; a manual drag order
+      // overrides it in place, and anything the order predates keeps its alphabetical slot.
+      const groups = labelWorkspaceGroups({
+        workspaces: unpinnedWorkspaces,
+        labelDefinitions: input.labelDefinitions,
+        unlabelledLabel: input.unlabelledLabel,
+      });
+      for (const group of groups) {
+        group.rows = applyStoredOrdering({
+          items: group.rows,
+          storedOrder: input.workspaceOrderByLabelGroup[group.key] ?? [],
+          getKey: (row) => row.workspaceKey,
+        });
+      }
       return applyStoredOrdering({
-        items: labelWorkspaceGroups({
-          workspaces: unpinnedWorkspaces,
-          labelDefinitions: input.labelDefinitions,
-          unlabelledLabel: input.unlabelledLabel,
-        }),
+        items: groups,
         storedOrder: input.labelGroupOrder,
         getKey: (group) => group.key,
       });
+    }
   }
 }

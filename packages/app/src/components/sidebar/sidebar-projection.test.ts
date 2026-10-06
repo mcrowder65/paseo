@@ -88,6 +88,7 @@ function projectionInput(options?: {
       { name: "Backend", color: "blue" as const },
     ],
     labelGroupOrder: [] as string[],
+    workspaceOrderByLabelGroup: {} as Record<string, string[]>,
     unlabelledLabel: "Unlabelled",
     pinnedCollapsed: options?.pinnedCollapsed ?? false,
     collapsedProjectKeys: new Set<string>(),
@@ -239,6 +240,29 @@ describe("buildSidebarProjection", () => {
       "label:backend",
       "label:",
     ]);
+  });
+
+  it("orders workspaces inside a label group by their stored drag order", () => {
+    const alpha = makeWorkspace("alpha", "done", ["Urgent"]);
+    const beta = makeWorkspace("beta", "done", ["Urgent"]);
+    const gamma = makeWorkspace("gamma", "done", ["Urgent"]);
+    const projection = buildSidebarProjection({
+      ...projectionInput({ groupMode: "label" }),
+      // Gamma was dragged above Alpha; Beta was never dragged and keeps its alphabetical slot.
+      workspaceOrderByLabelGroup: {
+        "label:urgent": [gamma.entry.workspaceKey, alpha.entry.workspaceKey],
+      },
+      projects: [makeProject([alpha.placement, beta.placement, gamma.placement])],
+      pinnedKeys: { pinnedWorkspaceKeys: [], pinnedAtByKey: {} },
+      workspaceEntriesByKey: new Map([
+        [alpha.entry.workspaceKey, alpha.entry],
+        [beta.entry.workspaceKey, beta.entry],
+        [gamma.entry.workspaceKey, gamma.entry],
+      ]),
+    });
+
+    const urgent = projection.workspaceGroups.find((group) => group.key === "label:urgent");
+    expect(urgent?.rows.map((entry) => entry.workspaceId)).toEqual(["gamma", "beta", "alpha"]);
   });
 
   it("does not number pinned chats while the pinned section is collapsed", () => {

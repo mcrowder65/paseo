@@ -2096,6 +2096,12 @@ function SidebarGroupedModeList({
   const showShortcutBadges = useShowShortcutBadges();
   const getLabelGroupOrder = useSidebarOrderStore((state) => state.getLabelGroupOrder);
   const setLabelGroupOrder = useSidebarOrderStore((state) => state.setLabelGroupOrder);
+  const getLabelGroupWorkspaceOrder = useSidebarOrderStore(
+    (state) => state.getLabelGroupWorkspaceOrder,
+  );
+  const setLabelGroupWorkspaceOrder = useSidebarOrderStore(
+    (state) => state.setLabelGroupWorkspaceOrder,
+  );
   const pinnedWorkspaces = useMemo(
     () =>
       pinnedGroups.pinnedChats.flatMap((workspace) => {
@@ -2129,6 +2135,29 @@ function SidebarGroupedModeList({
     [getLabelGroupOrder, setLabelGroupOrder],
   );
 
+  const handleGroupWorkspaceReorder = useCallback(
+    (groupKey: string, reorderedWorkspaces: SidebarWorkspaceEntry[]) => {
+      const reorderedWorkspaceKeys = reorderedWorkspaces.map((workspace) => workspace.workspaceKey);
+      const currentOrder = getLabelGroupWorkspaceOrder(groupKey);
+      if (
+        !hasVisibleOrderChanged({
+          currentOrder,
+          reorderedVisibleKeys: reorderedWorkspaceKeys,
+        })
+      ) {
+        return;
+      }
+      setLabelGroupWorkspaceOrder(
+        groupKey,
+        mergeWithRemainder({
+          currentOrder,
+          reorderedVisibleKeys: reorderedWorkspaceKeys,
+        }),
+      );
+    },
+    [getLabelGroupWorkspaceOrder, setLabelGroupWorkspaceOrder],
+  );
+
   return (
     <SidebarStatusWorkspaceList
       groups={workspaceGroups}
@@ -2147,6 +2176,7 @@ function SidebarGroupedModeList({
       dragGestureHostActive={dragGestureHostActive}
       draggableGroups={draggableGroups}
       onGroupReorder={handleGroupReorder}
+      onGroupWorkspaceReorder={draggableGroups ? handleGroupWorkspaceReorder : undefined}
     />
   );
 }

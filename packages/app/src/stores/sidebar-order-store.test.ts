@@ -22,6 +22,7 @@ describe("migrateSidebarOrderState", () => {
       projectOrder: ["project-a"],
       pinnedWorkspaceOrder: [],
       labelGroupOrder: [],
+      workspaceOrderByLabelGroup: {},
       workspaceOrderByProject: { "project-a": ["host-a:main", "host-a:feature", "host-b:main"] },
     });
   });

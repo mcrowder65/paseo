@@ -8,6 +8,7 @@ interface SidebarOrderStoreState {
   projectOrder: string[];
   pinnedWorkspaceOrder: string[];
   labelGroupOrder: string[];
+  workspaceOrderByLabelGroup: Record<string, string[]>;
   workspaceOrderByProject: Record<string, string[]>;
   getProjectOrder: () => string[];
   setProjectOrder: (keys: string[]) => void;
@@ -15,6 +16,8 @@ interface SidebarOrderStoreState {
   setPinnedWorkspaceOrder: (keys: string[]) => void;
   getLabelGroupOrder: () => string[];
   setLabelGroupOrder: (keys: string[]) => void;
+  getLabelGroupWorkspaceOrder: (labelGroupKey: string) => string[];
+  setLabelGroupWorkspaceOrder: (labelGroupKey: string, keys: string[]) => void;
   getWorkspaceOrder: (projectViewKey: string) => string[];
   setWorkspaceOrder: (projectViewKey: string, keys: string[]) => void;
 }
@@ -23,6 +26,7 @@ interface SidebarOrderPersistedState {
   projectOrder?: string[];
   pinnedWorkspaceOrder?: string[];
   labelGroupOrder?: string[];
+  workspaceOrderByLabelGroup?: Record<string, string[]>;
   workspaceOrderByProject?: Record<string, string[]>;
   projectOrderByServerId?: Record<string, string[]>;
   workspaceOrderByServerAndProject?: Record<string, string[]>;
@@ -33,6 +37,7 @@ const SidebarOrderPersistedStateSchema = z.strictObject({
   projectOrder: z.array(z.string()).optional(),
   pinnedWorkspaceOrder: z.array(z.string()).optional(),
   labelGroupOrder: z.array(z.string()).optional(),
+  workspaceOrderByLabelGroup: StringArrayRecordSchema.optional(),
   workspaceOrderByProject: StringArrayRecordSchema.optional(),
   projectOrderByServerId: StringArrayRecordSchema.optional(),
   workspaceOrderByServerAndProject: StringArrayRecordSchema.optional(),
@@ -115,6 +120,7 @@ export function migrateSidebarOrderState(persistedState: unknown): {
   projectOrder: string[];
   pinnedWorkspaceOrder: string[];
   labelGroupOrder: string[];
+  workspaceOrderByLabelGroup: Record<string, string[]>;
   workspaceOrderByProject: Record<string, string[]>;
 } {
   const result = SidebarOrderPersistedStateSchema.safeParse(persistedState);
@@ -123,6 +129,7 @@ export function migrateSidebarOrderState(persistedState: unknown): {
       projectOrder: [],
       pinnedWorkspaceOrder: [],
       labelGroupOrder: [],
+      workspaceOrderByLabelGroup: {},
       workspaceOrderByProject: {},
     };
   }
@@ -158,6 +165,7 @@ export function migrateSidebarOrderState(persistedState: unknown): {
     projectOrder,
     pinnedWorkspaceOrder: dedupeKeys(state.pinnedWorkspaceOrder ?? []),
     labelGroupOrder: normalizeKeys(state.labelGroupOrder ?? []),
+    workspaceOrderByLabelGroup: normalizeWorkspaceOrderByProject(state.workspaceOrderByLabelGroup),
     workspaceOrderByProject,
   };
 }
@@ -168,6 +176,7 @@ export const useSidebarOrderStore = create<SidebarOrderStoreState>()(
       projectOrder: [],
       pinnedWorkspaceOrder: [],
       labelGroupOrder: [],
+      workspaceOrderByLabelGroup: {},
       workspaceOrderByProject: {},
       getProjectOrder: () => get().projectOrder,
       setProjectOrder: (keys) => {
@@ -181,6 +190,17 @@ export const useSidebarOrderStore = create<SidebarOrderStoreState>()(
       setLabelGroupOrder: (keys) => {
         const normalized = normalizeKeys(keys);
         set({ labelGroupOrder: normalized });
+      },
+      getLabelGroupWorkspaceOrder: (labelGroupKey) =>
+        get().workspaceOrderByLabelGroup[labelGroupKey] ?? [],
+      setLabelGroupWorkspaceOrder: (labelGroupKey, keys) => {
+        if (!labelGroupKey.trim()) return;
+        set((state) => ({
+          workspaceOrderByLabelGroup: {
+            ...state.workspaceOrderByLabelGroup,
+            [labelGroupKey]: dedupeKeys(keys),
+          },
+        }));
       },
       getWorkspaceOrder: (projectViewKey) => {
         if (!projectViewKey.trim()) return [];
@@ -203,6 +223,7 @@ export const useSidebarOrderStore = create<SidebarOrderStoreState>()(
         projectOrder: state.projectOrder,
         pinnedWorkspaceOrder: state.pinnedWorkspaceOrder,
         labelGroupOrder: state.labelGroupOrder,
+        workspaceOrderByLabelGroup: state.workspaceOrderByLabelGroup,
         workspaceOrderByProject: state.workspaceOrderByProject,
       }),
       version: 3,

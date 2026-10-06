@@ -143,6 +143,7 @@ interface StatusWorkspaceListProps {
   /** Label mode lets the user drag group headers into a manual order; status buckets do not. */
   draggableGroups?: boolean;
   onGroupReorder?: (groups: SidebarWorkspaceGroup[]) => void;
+  onGroupWorkspaceReorder?: (groupKey: string, workspaces: SidebarWorkspaceEntry[]) => void;
 }
 
 export function SidebarStatusWorkspaceList({
@@ -162,6 +163,7 @@ export function SidebarStatusWorkspaceList({
   dragGestureHostActive,
   draggableGroups = false,
   onGroupReorder,
+  onGroupWorkspaceReorder,
 }: StatusWorkspaceListProps) {
   const { t } = useTranslation();
   const collapsedWorkspaceGroupKeys = useSidebarCollapsedSectionsStore(
@@ -267,6 +269,7 @@ export function SidebarStatusWorkspaceList({
           onToggleWorkspacePin={onToggleWorkspacePin}
           draggableGroups={draggableGroups}
           onGroupReorder={onGroupReorder}
+          onGroupWorkspaceReorder={onGroupWorkspaceReorder}
           parentGestureRef={parentGestureRef}
           dragGestureHostActive={dragGestureHostActive}
         />
@@ -303,6 +306,10 @@ function groupKeyExtractor(group: SidebarWorkspaceGroup): string {
   return group.key;
 }
 
+function workspaceEntryKeyExtractor(workspace: SidebarWorkspaceEntry): string {
+  return workspace.workspaceKey;
+}
+
 // An empty group always reads as collapsed, whatever its persisted state: there is nothing to
 // expand, and an expanded empty group leaves a gap under its header.
 function isGroupCollapsed(
@@ -324,6 +331,7 @@ function StatusGroupList({
   onToggleWorkspacePin,
   draggableGroups,
   onGroupReorder,
+  onGroupWorkspaceReorder,
   parentGestureRef,
   dragGestureHostActive,
 }: {
@@ -338,6 +346,7 @@ function StatusGroupList({
   onToggleWorkspacePin: ToggleSidebarWorkspacePin;
   draggableGroups: boolean;
   onGroupReorder?: (groups: SidebarWorkspaceGroup[]) => void;
+  onGroupWorkspaceReorder?: (groupKey: string, workspaces: SidebarWorkspaceEntry[]) => void;
   parentGestureRef?: MutableRefObject<GestureType | undefined>;
   dragGestureHostActive?: boolean;
 }) {
@@ -361,10 +370,16 @@ function StatusGroupList({
         drag={drag}
         isDragging={isActive}
         dragHandleProps={dragHandleProps}
+        onWorkspaceReorder={onGroupWorkspaceReorder}
+        parentGestureRef={parentGestureRef}
+        dragGestureHostActive={dragGestureHostActive}
       />
     ),
     [
       collapsedWorkspaceGroupKeys,
+      dragGestureHostActive,
+      onGroupWorkspaceReorder,
+      parentGestureRef,
       hostBadgeByServerId,
       onToggleWorkspacePin,
       onWorkspacePress,
@@ -430,6 +445,9 @@ function StatusGroupRows({
   drag,
   isDragging = false,
   dragHandleProps,
+  onWorkspaceReorder,
+  parentGestureRef,
+  dragGestureHostActive,
 }: {
   group: SidebarWorkspaceGroup;
   collapsed: boolean;
@@ -443,6 +461,9 @@ function StatusGroupRows({
   drag?: () => void;
   isDragging?: boolean;
   dragHandleProps?: DraggableListDragHandleProps;
+  onWorkspaceReorder?: (groupKey: string, workspaces: SidebarWorkspaceEntry[]) => void;
+  parentGestureRef?: MutableRefObject<GestureType | undefined>;
+  dragGestureHostActive?: boolean;
 }) {
   const {
     visibleItems: visibleWorkspaces,
@@ -450,6 +471,44 @@ function StatusGroupRows({
     canToggle: canToggleWorkspaces,
     toggleExpanded: toggleWorkspacesExpanded,
   } = useLimitedSidebarGroup(group.rows, STATUS_GROUP_VISIBILITY);
+  const handleWorkspaceDragEnd = useCallback(
+    (workspaces: SidebarWorkspaceEntry[]) => onWorkspaceReorder?.(group.key, workspaces),
+    [group.key, onWorkspaceReorder],
+  );
+  const renderDraggableWorkspace = useCallback(
+    ({
+      item: workspace,
+      drag: dragWorkspace,
+      isActive,
+      dragHandleProps: workspaceDragHandleProps,
+    }: DraggableRenderItemInfo<SidebarWorkspaceEntry>) => (
+      <StatusWorkspaceRow
+        workspace={workspace}
+        {...buildStatusRowProjectPresentation({
+          workspace,
+          projectIconByProjectViewKey,
+          hostBadgeByServerId,
+        })}
+        shortcutNumber={shortcutIndex.get(workspace.workspaceKey) ?? null}
+        showShortcutBadge={showShortcutBadges}
+        canPin={supportsPinningByServerId.get(workspace.serverId) === true}
+        onToggleWorkspacePin={onToggleWorkspacePin}
+        onWorkspacePress={onWorkspacePress}
+        drag={dragWorkspace}
+        isDragging={isActive}
+        dragHandleProps={workspaceDragHandleProps}
+      />
+    ),
+    [
+      hostBadgeByServerId,
+      onToggleWorkspacePin,
+      onWorkspacePress,
+      projectIconByProjectViewKey,
+      shortcutIndex,
+      showShortcutBadges,
+      supportsPinningByServerId,
+    ],
+  );
 
   return (
     <View style={collapsed ? undefined : styles.statusGroupBlockExpanded}>
@@ -465,22 +524,37 @@ function StatusGroupRows({
           style={styles.statusWorkspaceListContainer}
           testID={`sidebar-status-group-rows-${group.key}`}
         >
-          {visibleWorkspaces.map((workspace) => (
-            <StatusWorkspaceRow
-              key={workspace.workspaceKey}
-              workspace={workspace}
-              {...buildStatusRowProjectPresentation({
-                workspace,
-                projectIconByProjectViewKey,
-                hostBadgeByServerId,
-              })}
-              shortcutNumber={shortcutIndex.get(workspace.workspaceKey) ?? null}
-              showShortcutBadge={showShortcutBadges}
-              canPin={supportsPinningByServerId.get(workspace.serverId) === true}
-              onToggleWorkspacePin={onToggleWorkspacePin}
-              onWorkspacePress={onWorkspacePress}
+          {onWorkspaceReorder ? (
+            <DraggableList
+              testID={`sidebar-label-group-workspace-list-${group.key}`}
+              data={visibleWorkspaces}
+              keyExtractor={workspaceEntryKeyExtractor}
+              renderItem={renderDraggableWorkspace}
+              onDragEnd={handleWorkspaceDragEnd}
+              scrollEnabled={false}
+              useDragHandle
+              nestable={platformIsNative}
+              simultaneousGestureRef={parentGestureRef}
+              gestureHostPresented={dragGestureHostActive}
             />
-          ))}
+          ) : (
+            visibleWorkspaces.map((workspace) => (
+              <StatusWorkspaceRow
+                key={workspace.workspaceKey}
+                workspace={workspace}
+                {...buildStatusRowProjectPresentation({
+                  workspace,
+                  projectIconByProjectViewKey,
+                  hostBadgeByServerId,
+                })}
+                shortcutNumber={shortcutIndex.get(workspace.workspaceKey) ?? null}
+                showShortcutBadge={showShortcutBadges}
+                canPin={supportsPinningByServerId.get(workspace.serverId) === true}
+                onToggleWorkspacePin={onToggleWorkspacePin}
+                onWorkspacePress={onWorkspacePress}
+              />
+            ))
+          )}
           {canToggleWorkspaces ? (
             <SidebarGroupToggleRow
               expanded={workspacesExpanded}
