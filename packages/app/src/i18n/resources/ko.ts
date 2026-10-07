@@ -1150,6 +1150,10 @@ export const ko: TranslationResources = {
       deleteMessage_other: "이 호스트의 워크스페이스 {{count}}개에서 레이블을 제거합니다.",
       offline: "이 호스트는 오프라인입니다.",
       updateHost: "레이블을 관리하려면 호스트를 업데이트하세요.",
+      default: "기본",
+      defaultLabel: "기본 레이블",
+      defaultLabelHint:
+        "레이블이 없는 워크스페이스는 이 레이블 아래에 표시되고, 새 워크스페이스에는 이 레이블이 지정됩니다.",
     },
   },
   changelog: {

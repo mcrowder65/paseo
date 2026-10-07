@@ -1169,6 +1169,9 @@ export const ptBR: TranslationResources = {
       deleteMessage_other: "Isso remove a etiqueta de {{count}} workspaces neste host.",
       offline: "Este host está offline.",
       updateHost: "Atualize este host para gerenciar etiquetas.",
+      default: "Padrão",
+      defaultLabel: "Etiqueta padrão",
+      defaultLabelHint: "Workspaces sem etiqueta aparecem nesta, e novos workspaces a recebem.",
     },
   },
   changelog: {

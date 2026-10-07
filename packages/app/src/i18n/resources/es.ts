@@ -1179,6 +1179,10 @@ export const es: TranslationResources = {
       deleteMessage_other: "Esto quita la etiqueta de {{count}} espacios de trabajo en este host.",
       offline: "Este host está desconectado.",
       updateHost: "Actualiza este host para gestionar etiquetas.",
+      default: "Predeterminada",
+      defaultLabel: "Etiqueta predeterminada",
+      defaultLabelHint:
+        "Los espacios de trabajo sin etiqueta aparecen bajo esta, y los nuevos la reciben.",
     },
   },
   changelog: {

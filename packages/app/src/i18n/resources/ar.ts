@@ -1143,6 +1143,10 @@ export const ar: TranslationResources = {
       deleteMessage_other: "سيؤدي هذا إلى إزالة التسمية من {{count}} مساحات عمل على هذا المضيف.",
       offline: "هذا المضيف غير متصل.",
       updateHost: "حدّث هذا المضيف لإدارة التسميات.",
+      default: "افتراضي",
+      defaultLabel: "التسمية الافتراضية",
+      defaultLabelHint:
+        "تظهر مساحات العمل بلا تسمية تحت هذه التسمية، وتحصل عليها مساحات العمل الجديدة.",
     },
   },
   changelog: {

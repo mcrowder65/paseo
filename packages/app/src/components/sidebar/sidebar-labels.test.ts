@@ -195,3 +195,37 @@ describe("label board", () => {
     expect(rowsOf("label:done")).toEqual(["b", "c"]);
   });
 });
+
+describe("default label", () => {
+  const definitions = [
+    { name: "Backlog", color: "sky" as const },
+    { name: "Doing", color: "amber" as const },
+  ];
+  const doing = workspace("doing", ["Doing"]);
+  const loose = workspace("loose", []);
+
+  test("collects workspaces with no label, leaving no Unlabelled group", () => {
+    const groups = labelWorkspaceGroups({
+      workspaces: [doing, loose],
+      labelDefinitions: definitions,
+      unlabelledLabel: "Unlabelled",
+      defaultLabelKey: "backlog",
+    });
+    expect(groups.map((group) => group.key)).toEqual(["label:backlog", "label:doing"]);
+    expect(groups[0]?.rows.map((row) => row.workspaceId)).toEqual(["loose"]);
+  });
+
+  test("falls back to Unlabelled when the default label no longer exists", () => {
+    const groups = labelWorkspaceGroups({
+      workspaces: [doing, loose],
+      labelDefinitions: definitions,
+      unlabelledLabel: "Unlabelled",
+      defaultLabelKey: "deleted",
+    });
+    expect(groups.map((group) => group.key)).toEqual([
+      "label:backlog",
+      "label:doing",
+      LABEL_UNLABELLED_GROUP_KEY,
+    ]);
+  });
+});

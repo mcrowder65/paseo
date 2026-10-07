@@ -76,6 +76,7 @@ export function SidebarModelProvider({
   const workspaceOrderByLabelGroup = useSidebarOrderStore(
     (state) => state.workspaceOrderByLabelGroup,
   );
+  const defaultLabelKey = useSidebarOrderStore((state) => state.defaultLabelKey);
   const toggleProjectCollapsed = useSidebarCollapsedSectionsStore(
     (state) => state.toggleProjectCollapsed,
   );
@@ -164,6 +165,7 @@ export function SidebarModelProvider({
       labelDefinitions,
       labelGroupOrder,
       workspaceOrderByLabelGroup,
+      defaultLabelKey,
       unlabelledLabel,
       pinnedCollapsed,
       collapsedProjectKeys,
@@ -177,6 +179,7 @@ export function SidebarModelProvider({
       labelDefinitions,
       labelGroupOrder,
       workspaceOrderByLabelGroup,
+      defaultLabelKey,
       unlabelledLabel,
       list.projectNamesByViewKey,
       filteredProjects,

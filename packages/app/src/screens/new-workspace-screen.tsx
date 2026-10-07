@@ -119,6 +119,7 @@ import {
 import { captureWorkspaceDraftCleanup } from "./new-workspace/background-handoff";
 import { useNewWorkspaceScreenPresence } from "./new-workspace/screen-presence";
 import { useWorkspaceLabelDefinitions, workspaceLabels } from "@/workspace-labels";
+import { useSidebarOrderStore } from "@/stores/sidebar-order-store";
 
 function useIsNewWorkspaceDraftHandoffActive(input: {
   draftId: string | undefined;
@@ -909,7 +910,11 @@ export function NewWorkspaceScreen({
   }));
   // The label only assigns if the selected host's catalog actually knows it; a name that host
   // never defined resolves to nothing and the workspace is created unlabelled rather than erroring.
-  const initialLabelNames = useMemo(() => (initialLabel ? [initialLabel] : []), [initialLabel]);
+  const defaultLabelKey = useSidebarOrderStore((state) => state.defaultLabelKey);
+  const initialLabelNames = useMemo(() => {
+    const name = initialLabel ?? defaultLabelKey;
+    return name ? [name] : [];
+  }, [defaultLabelKey, initialLabel]);
   const initialLabelDefinitions = useWorkspaceLabelDefinitions(selectedServerId, initialLabelNames);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [creationResult, setCreationResult] = useState<

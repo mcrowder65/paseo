@@ -1135,6 +1135,9 @@ export const zhCN: TranslationResources = {
       deleteMessage_other: "这会从此主机的{{count}}个工作区中移除该标签。",
       offline: "此主机离线。",
       updateHost: "请更新此主机以管理标签。",
+      default: "默认",
+      defaultLabel: "默认标签",
+      defaultLabelHint: "没有标签的工作区显示在此标签下，新工作区也会获得此标签。",
     },
   },
   changelog: {

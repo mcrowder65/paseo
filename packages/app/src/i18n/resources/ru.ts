@@ -1160,6 +1160,10 @@ export const ru: TranslationResources = {
       deleteMessage_other: "Метка будет снята с {{count}} рабочих пространств на этом хосте.",
       offline: "Этот хост не в сети.",
       updateHost: "Обновите этот хост для управления метками.",
+      default: "По умолчанию",
+      defaultLabel: "Метка по умолчанию",
+      defaultLabelHint:
+        "Рабочие пространства без метки отображаются под этой меткой, а новые получают её.",
     },
   },
   changelog: {

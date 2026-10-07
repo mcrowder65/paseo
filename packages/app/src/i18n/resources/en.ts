@@ -1151,6 +1151,10 @@ export const en = {
       deleteMessage_other: "This removes the label from {{count}} workspaces on this host.",
       offline: "This host is offline.",
       updateHost: "Update this host to manage labels.",
+      default: "Default",
+      defaultLabel: "Default label",
+      defaultLabelHint:
+        "Workspaces with no label show under this label, and new workspaces get it.",
     },
   },
   changelog: {

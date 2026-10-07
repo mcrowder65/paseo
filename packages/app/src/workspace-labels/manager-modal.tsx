@@ -20,6 +20,7 @@ import { HostFilter } from "@/components/hosts/host-filter";
 import { Button } from "@/components/ui/button";
 import type { FieldControlSize } from "@/components/ui/control-geometry";
 import { Field, FormTextInput } from "@/components/ui/form-field";
+import { Switch } from "@/components/ui/switch";
 import { useIsCompactFormFactor } from "@/constants/layout";
 import { isNative } from "@/constants/platform";
 import { useHosts } from "@/runtime/host-runtime";
@@ -67,15 +68,30 @@ export function WorkspaceLabelManagerModal({
   const { hosts: labelHosts } = useWorkspaceLabelProjection();
   const labelGroupOrder = useSidebarOrderStore((state) => state.labelGroupOrder);
   const setLabelGroupOrder = useSidebarOrderStore((state) => state.setLabelGroupOrder);
+  const defaultLabelKey = useSidebarOrderStore((state) => state.defaultLabelKey);
+  const setDefaultLabelKey = useSidebarOrderStore((state) => state.setDefaultLabelKey);
   const snapshots = useMemo(
     () => Object.fromEntries(labelHosts.map((host) => [host.serverId, host])),
     [labelHosts],
   );
   const [model] = useState(() =>
     createWorkspaceLabelManagerModel({
-      update: (input) => workspaceLabels.update(input),
+      // The default is held by key, so a rename has to carry it and a delete has to drop it.
+      update: async (input) => {
+        const result = await workspaceLabels.update(input);
+        const store = useSidebarOrderStore.getState();
+        if (input.newName && store.defaultLabelKey === workspaceLabelKey(input.name)) {
+          store.setDefaultLabelKey(workspaceLabelKey(input.newName));
+        }
+        return result;
+      },
       inspectDelete: (input) => workspaceLabels.inspectDelete(input),
-      delete: (input) => workspaceLabels.delete(input),
+      delete: async (input) => {
+        const result = await workspaceLabels.delete(input);
+        const store = useSidebarOrderStore.getState();
+        if (store.defaultLabelKey === workspaceLabelKey(input.name)) store.setDefaultLabelKey(null);
+        return result;
+      },
     }),
   );
 
@@ -148,6 +164,7 @@ export function WorkspaceLabelManagerModal({
     }: DraggableRenderItemInfo<WorkspaceLabelDefinition>) => (
       <WorkspaceLabelManagerRow
         label={label}
+        isDefault={defaultLabelKey === workspaceLabelKey(label.name)}
         disabled={disabled}
         onEdit={edit}
         drag={drag}
@@ -155,7 +172,16 @@ export function WorkspaceLabelManagerModal({
         dragHandleProps={dragHandleProps}
       />
     ),
-    [disabled, edit],
+    [defaultLabelKey, disabled, edit],
+  );
+
+  const editingIsDefault = editing !== null && defaultLabelKey === workspaceLabelKey(editing.name);
+  const setEditingDefault = useCallback(
+    (value: boolean) => {
+      if (!editing) return;
+      setDefaultLabelKey(value ? workspaceLabelKey(editing.name) : null);
+    },
+    [editing, setDefaultLabelKey],
   );
 
   const isEditing = draft !== null;
@@ -225,6 +251,8 @@ export function WorkspaceLabelManagerModal({
           onChangeName={setDraftName}
           onChangeColor={setDraftColor}
           onSubmit={save}
+          isDefault={editingIsDefault}
+          onChangeDefault={setEditingDefault}
         />
       ) : (
         <>
@@ -254,6 +282,7 @@ export function WorkspaceLabelManagerModal({
                 <WorkspaceLabelManagerRow
                   key={workspaceLabelKey(label.name)}
                   label={label}
+                  isDefault={defaultLabelKey === workspaceLabelKey(label.name)}
                   disabled={disabled}
                   onEdit={edit}
                 />
@@ -295,6 +324,7 @@ function labelKeyExtractor(label: WorkspaceLabelDefinition): string {
  */
 function WorkspaceLabelManagerRow({
   label,
+  isDefault,
   disabled,
   onEdit,
   drag,
@@ -302,6 +332,7 @@ function WorkspaceLabelManagerRow({
   dragHandleProps,
 }: {
   label: WorkspaceLabelDefinition;
+  isDefault: boolean;
   disabled: boolean;
   onEdit: (label: WorkspaceLabelDefinition) => void;
   drag?: () => void;
@@ -347,6 +378,7 @@ function WorkspaceLabelManagerRow({
         <Text style={styles.rowName} numberOfLines={1}>
           {label.name}
         </Text>
+        {isDefault ? <Text style={styles.muted}>{t("workspaceLabels.manage.default")}</Text> : null}
       </Pressable>
       <Pressable
         accessibilityRole="button"
@@ -377,6 +409,8 @@ function WorkspaceLabelEditView({
   onChangeName,
   onChangeColor,
   onSubmit,
+  isDefault,
+  onChangeDefault,
 }: {
   draft: WorkspaceLabelManagerDraft;
   disabled: boolean;
@@ -384,6 +418,8 @@ function WorkspaceLabelEditView({
   onChangeName: (value: string) => void;
   onChangeColor: (color: WorkspaceLabelColor) => void;
   onSubmit: () => void;
+  isDefault: boolean;
+  onChangeDefault: (value: boolean) => void;
 }): ReactElement {
   const { t } = useTranslation();
   const size: FieldControlSize = useIsCompactFormFactor() ? "md" : "sm";
@@ -411,6 +447,18 @@ function WorkspaceLabelEditView({
           testID="workspace-label-manager-colors"
         />
       </Field>
+      <View style={styles.defaultRow}>
+        <View style={styles.defaultText}>
+          <Text style={styles.defaultTitle}>{t("workspaceLabels.manage.defaultLabel")}</Text>
+          <Text style={styles.muted}>{t("workspaceLabels.manage.defaultLabelHint")}</Text>
+        </View>
+        <Switch
+          value={isDefault}
+          onValueChange={onChangeDefault}
+          accessibilityLabel={t("workspaceLabels.manage.defaultLabel")}
+          testID="workspace-label-manager-default"
+        />
+      </View>
       {error ? (
         <Text style={styles.error} testID="workspace-label-manager-error">
           {error}
@@ -432,6 +480,20 @@ const styles = StyleSheet.create((theme) => ({
     alignItems: "center",
     gap: theme.spacing[2],
     minHeight: 32,
+  },
+  defaultRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: theme.spacing[3],
+  },
+  defaultText: {
+    flex: 1,
+    minWidth: 0,
+    gap: theme.spacing[1],
+  },
+  defaultTitle: {
+    color: theme.colors.foreground,
+    fontSize: theme.fontSize.sm,
   },
   rowDragging: {
     backgroundColor: theme.colors.surface2,

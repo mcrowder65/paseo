@@ -1172,6 +1172,10 @@ export const fr: TranslationResources = {
       deleteMessage_other: "Cela retire l’étiquette de {{count}} espaces de travail sur cet hôte.",
       offline: "Cet hôte est hors ligne.",
       updateHost: "Mettez à jour cet hôte pour gérer les étiquettes.",
+      default: "Par défaut",
+      defaultLabel: "Étiquette par défaut",
+      defaultLabelHint:
+        "Les espaces de travail sans étiquette apparaissent sous celle-ci, et les nouveaux la reçoivent.",
     },
   },
   changelog: {

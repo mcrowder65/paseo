@@ -52,6 +52,7 @@ export interface SidebarProjectionInput {
   labelDefinitions: readonly WorkspaceLabelDefinition[];
   labelGroupOrder: string[];
   workspaceOrderByLabelGroup: Readonly<Record<string, string[]>>;
+  defaultLabelKey: string | null;
   unlabelledLabel: string;
   pinnedCollapsed: boolean;
   collapsedProjectKeys: ReadonlySet<string>;
@@ -121,6 +122,7 @@ function buildWorkspaceGroups(
         workspaces: unpinnedWorkspaces,
         labelDefinitions: input.labelDefinitions,
         unlabelledLabel: input.unlabelledLabel,
+        defaultLabelKey: input.defaultLabelKey,
       });
       for (const group of groups) {
         group.rows = applyStoredOrdering({

@@ -79,6 +79,11 @@ export function labelWorkspaceGroups(input: {
   workspaces: readonly SidebarWorkspaceEntry[];
   labelDefinitions: readonly WorkspaceLabelDefinition[];
   unlabelledLabel: string;
+  /**
+   * A label that takes the workspaces carrying none, in place of an Unlabelled group. Display
+   * only: nothing is assigned. A key no group has (a deleted label) falls back to Unlabelled.
+   */
+  defaultLabelKey?: string | null;
 }): SidebarWorkspaceGroup[] {
   const colorByKey = new Map<string, WorkspaceLabelColor>();
   const nameByKey = new Map<string, string>();
@@ -113,6 +118,12 @@ export function labelWorkspaceGroups(input: {
       }
       rows.push(workspace);
     }
+  }
+
+  const defaultRows = input.defaultLabelKey ? rowsByKey.get(input.defaultLabelKey) : undefined;
+  if (defaultRows) {
+    for (const row of unlabelledRows) defaultRows.push(row);
+    unlabelledRows.length = 0;
   }
 
   const groups: SidebarWorkspaceGroup[] = [...rowsByKey.keys()]

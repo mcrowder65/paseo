@@ -23,6 +23,7 @@ describe("migrateSidebarOrderState", () => {
       pinnedWorkspaceOrder: [],
       labelGroupOrder: [],
       workspaceOrderByLabelGroup: {},
+      defaultLabelKey: null,
       workspaceOrderByProject: { "project-a": ["host-a:main", "host-a:feature", "host-b:main"] },
     });
   });

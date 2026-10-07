@@ -410,13 +410,12 @@ function LabelBoardList(props: StatusGroupListProps) {
       }),
     [pendingMoves, props.groups, workspaceOrderByLabelGroup],
   );
-  const { collapsedWorkspaceGroupKeys } = props;
   const items = useMemo(
     () =>
       buildLabelBoardItems(displayedGroups, (group) =>
-        isGroupCollapsed(group, collapsedWorkspaceGroupKeys),
+        isGroupCollapsed(group, props.collapsedWorkspaceGroupKeys),
       ),
-    [collapsedWorkspaceGroupKeys, displayedGroups],
+    [props.collapsedWorkspaceGroupKeys, displayedGroups],
   );
 
   const settleMove = useCallback((move: LabelBoardMove) => {
@@ -445,15 +444,6 @@ function LabelBoardList(props: StatusGroupListProps) {
     [displayedGroups, getLabelGroupWorkspaceOrder, setLabelGroupWorkspaceOrder, settleMove, toast],
   );
 
-  const {
-    projectIconByProjectViewKey,
-    hostBadgeByServerId,
-    shortcutIndex,
-    showShortcutBadges,
-    supportsPinningByServerId,
-    onToggleWorkspacePin,
-    onWorkspacePress,
-  } = props;
   const renderItem = useCallback(
     ({ item, drag, isActive, dragHandleProps }: DraggableRenderItemInfo<LabelBoardItem>) => {
       if (item.kind === "header") {
@@ -465,14 +455,14 @@ function LabelBoardList(props: StatusGroupListProps) {
             workspace={item.workspace}
             {...buildStatusRowProjectPresentation({
               workspace: item.workspace,
-              projectIconByProjectViewKey,
-              hostBadgeByServerId,
+              projectIconByProjectViewKey: props.projectIconByProjectViewKey,
+              hostBadgeByServerId: props.hostBadgeByServerId,
             })}
-            shortcutNumber={shortcutIndex.get(item.workspace.workspaceKey) ?? null}
-            showShortcutBadge={showShortcutBadges}
-            canPin={supportsPinningByServerId.get(item.workspace.serverId) === true}
-            onToggleWorkspacePin={onToggleWorkspacePin}
-            onWorkspacePress={onWorkspacePress}
+            shortcutNumber={props.shortcutIndex.get(item.workspace.workspaceKey) ?? null}
+            showShortcutBadge={props.showShortcutBadges}
+            canPin={props.supportsPinningByServerId.get(item.workspace.serverId) === true}
+            onToggleWorkspacePin={props.onToggleWorkspacePin}
+            onWorkspacePress={props.onWorkspacePress}
             drag={drag}
             isDragging={isActive}
             dragHandleProps={dragHandleProps}
@@ -481,13 +471,13 @@ function LabelBoardList(props: StatusGroupListProps) {
       );
     },
     [
-      hostBadgeByServerId,
-      onToggleWorkspacePin,
-      onWorkspacePress,
-      projectIconByProjectViewKey,
-      shortcutIndex,
-      showShortcutBadges,
-      supportsPinningByServerId,
+      props.hostBadgeByServerId,
+      props.onToggleWorkspacePin,
+      props.onWorkspacePress,
+      props.projectIconByProjectViewKey,
+      props.shortcutIndex,
+      props.showShortcutBadges,
+      props.supportsPinningByServerId,
     ],
   );
 

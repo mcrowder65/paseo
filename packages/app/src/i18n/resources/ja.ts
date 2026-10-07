@@ -1156,6 +1156,10 @@ export const ja: TranslationResources = {
       deleteMessage_other: "このホストの{{count}}個のワークスペースからラベルを削除します。",
       offline: "このホストはオフラインです。",
       updateHost: "ラベルを管理するにはホストを更新してください。",
+      default: "デフォルト",
+      defaultLabel: "デフォルトのラベル",
+      defaultLabelHint:
+        "ラベルのないワークスペースはこのラベルの下に表示され、新しいワークスペースにはこのラベルが付きます。",
     },
   },
   changelog: {

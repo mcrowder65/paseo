@@ -89,6 +89,7 @@ function projectionInput(options?: {
     ],
     labelGroupOrder: [] as string[],
     workspaceOrderByLabelGroup: {} as Record<string, string[]>,
+    defaultLabelKey: null as string | null,
     unlabelledLabel: "Unlabelled",
     pinnedCollapsed: options?.pinnedCollapsed ?? false,
     collapsedProjectKeys: new Set<string>(),

@@ -10,6 +10,9 @@ interface SidebarOrderStoreState {
   labelGroupOrder: string[];
   workspaceOrderByLabelGroup: Record<string, string[]>;
   workspaceOrderByProject: Record<string, string[]>;
+  /** `workspaceLabelKey` of the label that collects workspaces carrying none. */
+  defaultLabelKey: string | null;
+  setDefaultLabelKey: (key: string | null) => void;
   getProjectOrder: () => string[];
   setProjectOrder: (keys: string[]) => void;
   getPinnedWorkspaceOrder: () => string[];
@@ -28,6 +31,7 @@ interface SidebarOrderPersistedState {
   labelGroupOrder?: string[];
   workspaceOrderByLabelGroup?: Record<string, string[]>;
   workspaceOrderByProject?: Record<string, string[]>;
+  defaultLabelKey?: string | null;
   projectOrderByServerId?: Record<string, string[]>;
   workspaceOrderByServerAndProject?: Record<string, string[]>;
 }
@@ -38,6 +42,7 @@ const SidebarOrderPersistedStateSchema = z.strictObject({
   pinnedWorkspaceOrder: z.array(z.string()).optional(),
   labelGroupOrder: z.array(z.string()).optional(),
   workspaceOrderByLabelGroup: StringArrayRecordSchema.optional(),
+  defaultLabelKey: z.string().nullable().optional(),
   workspaceOrderByProject: StringArrayRecordSchema.optional(),
   projectOrderByServerId: StringArrayRecordSchema.optional(),
   workspaceOrderByServerAndProject: StringArrayRecordSchema.optional(),
@@ -122,6 +127,7 @@ export function migrateSidebarOrderState(persistedState: unknown): {
   labelGroupOrder: string[];
   workspaceOrderByLabelGroup: Record<string, string[]>;
   workspaceOrderByProject: Record<string, string[]>;
+  defaultLabelKey: string | null;
 } {
   const result = SidebarOrderPersistedStateSchema.safeParse(persistedState);
   if (!result.success) {
@@ -131,6 +137,7 @@ export function migrateSidebarOrderState(persistedState: unknown): {
       labelGroupOrder: [],
       workspaceOrderByLabelGroup: {},
       workspaceOrderByProject: {},
+      defaultLabelKey: null,
     };
   }
   const state: SidebarOrderPersistedState = result.data;
@@ -166,6 +173,7 @@ export function migrateSidebarOrderState(persistedState: unknown): {
     pinnedWorkspaceOrder: dedupeKeys(state.pinnedWorkspaceOrder ?? []),
     labelGroupOrder: normalizeKeys(state.labelGroupOrder ?? []),
     workspaceOrderByLabelGroup: normalizeWorkspaceOrderByProject(state.workspaceOrderByLabelGroup),
+    defaultLabelKey: state.defaultLabelKey?.trim() || null,
     workspaceOrderByProject,
   };
 }
@@ -178,6 +186,8 @@ export const useSidebarOrderStore = create<SidebarOrderStoreState>()(
       labelGroupOrder: [],
       workspaceOrderByLabelGroup: {},
       workspaceOrderByProject: {},
+      defaultLabelKey: null,
+      setDefaultLabelKey: (key) => set({ defaultLabelKey: key?.trim() || null }),
       getProjectOrder: () => get().projectOrder,
       setProjectOrder: (keys) => {
         set({ projectOrder: dedupeKeys(keys) });
@@ -224,6 +234,7 @@ export const useSidebarOrderStore = create<SidebarOrderStoreState>()(
         pinnedWorkspaceOrder: state.pinnedWorkspaceOrder,
         labelGroupOrder: state.labelGroupOrder,
         workspaceOrderByLabelGroup: state.workspaceOrderByLabelGroup,
+        defaultLabelKey: state.defaultLabelKey,
         workspaceOrderByProject: state.workspaceOrderByProject,
       }),
       version: 3,
