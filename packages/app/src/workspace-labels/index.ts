@@ -226,6 +226,29 @@ class WorkspaceLabelsController {
     return latest;
   }
 
+  /**
+   * The daemon only adds a label to its catalog on first assignment, and keeps it after the last
+   * unassignment. So a label is created by assigning it to `carrierWorkspaceId` and taking it
+   * straight back off; the carrier's own labels are untouched. Raw client calls on purpose:
+   * `setAssignment` would strip the carrier's other label.
+   */
+  async create(input: {
+    serverId: string;
+    label: WorkspaceLabelDefinition;
+    carrierWorkspaceId: string;
+  }): Promise<void> {
+    const key = workspaceLabelKey(input.label.name);
+    const catalog = this.replicas.get(input.serverId)?.snapshot().labels ?? [];
+    if (catalog.some((label) => workspaceLabelKey(label.name) === key)) {
+      throw new Error(i18n.t("workspaceLabels.manage.exists"));
+    }
+    const request = { workspaceId: input.carrierWorkspaceId, label: input.label };
+    await this.mutate(input.serverId, async (client) => {
+      await client.setWorkspaceLabel({ ...request, assigned: true });
+      await client.setWorkspaceLabel({ ...request, assigned: false });
+    });
+  }
+
   async update(input: {
     serverId: string;
     name: string;

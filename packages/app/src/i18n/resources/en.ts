@@ -1155,6 +1155,8 @@ export const en = {
       defaultLabel: "Default label",
       defaultLabelHint:
         "Workspaces with no label show under this label, and new workspaces get it.",
+      exists: "A label with this name already exists.",
+      needsWorkspace: "Add a workspace on this host before creating a label.",
     },
   },
   changelog: {

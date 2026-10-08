@@ -1138,6 +1138,8 @@ export const zhCN: TranslationResources = {
       default: "默认",
       defaultLabel: "默认标签",
       defaultLabelHint: "没有标签的工作区显示在此标签下，新工作区也会获得此标签。",
+      exists: "已存在同名标签。",
+      needsWorkspace: "请先在此主机上添加工作区，再创建标签。",
     },
   },
   changelog: {

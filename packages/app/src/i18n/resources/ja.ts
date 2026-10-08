@@ -1160,6 +1160,8 @@ export const ja: TranslationResources = {
       defaultLabel: "デフォルトのラベル",
       defaultLabelHint:
         "ラベルのないワークスペースはこのラベルの下に表示され、新しいワークスペースにはこのラベルが付きます。",
+      exists: "この名前のラベルはすでに存在します。",
+      needsWorkspace: "ラベルを作成する前に、このホストにワークスペースを追加してください。",
     },
   },
   changelog: {

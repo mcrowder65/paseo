@@ -1172,6 +1172,8 @@ export const ptBR: TranslationResources = {
       default: "Padrão",
       defaultLabel: "Etiqueta padrão",
       defaultLabelHint: "Workspaces sem etiqueta aparecem nesta, e novos workspaces a recebem.",
+      exists: "Já existe uma etiqueta com este nome.",
+      needsWorkspace: "Adicione um workspace neste host antes de criar uma etiqueta.",
     },
   },
   changelog: {

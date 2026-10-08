@@ -1183,6 +1183,8 @@ export const es: TranslationResources = {
       defaultLabel: "Etiqueta predeterminada",
       defaultLabelHint:
         "Los espacios de trabajo sin etiqueta aparecen bajo esta, y los nuevos la reciben.",
+      exists: "Ya existe una etiqueta con este nombre.",
+      needsWorkspace: "Añade un espacio de trabajo en este host antes de crear una etiqueta.",
     },
   },
   changelog: {

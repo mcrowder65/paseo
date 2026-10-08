@@ -1176,6 +1176,8 @@ export const fr: TranslationResources = {
       defaultLabel: "Étiquette par défaut",
       defaultLabelHint:
         "Les espaces de travail sans étiquette apparaissent sous celle-ci, et les nouveaux la reçoivent.",
+      exists: "Une étiquette porte déjà ce nom.",
+      needsWorkspace: "Ajoutez un espace de travail sur cet hôte avant de créer une étiquette.",
     },
   },
   changelog: {

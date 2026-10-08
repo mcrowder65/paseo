@@ -8,9 +8,11 @@ import {
 } from "react";
 import { Pressable, Text, View, type PressableStateCallbackType } from "react-native";
 import type { Ref } from "react";
-import { Pencil } from "lucide-react-native";
+import { Pencil, Plus } from "lucide-react-native";
 import { StyleSheet, withUnistyles } from "react-native-unistyles";
 import {
+  normalizeWorkspaceLabelName,
+  WORKSPACE_LABEL_COLORS,
   workspaceLabelKey,
   type WorkspaceLabelColor,
   type WorkspaceLabelDefinition,
@@ -34,9 +36,12 @@ import { confirmDialog } from "@/utils/confirm-dialog";
 import {
   createWorkspaceLabelManagerModel,
   useWorkspaceLabelProjection,
+  workspaceLabelErrorMessage,
   workspaceLabels,
   type WorkspaceLabelManagerDraft,
+  type WorkspaceLabelManagerSnapshot,
 } from "@/workspace-labels";
+import { useSessionStore } from "@/stores/session-store";
 import { WorkspaceLabelDot, WorkspaceLabelSwatchRow } from "./swatch";
 import { useTranslation } from "react-i18next";
 
@@ -67,7 +72,6 @@ export function WorkspaceLabelManagerModal({
   const hosts = useHosts();
   const { hosts: labelHosts } = useWorkspaceLabelProjection();
   const labelGroupOrder = useSidebarOrderStore((state) => state.labelGroupOrder);
-  const setLabelGroupOrder = useSidebarOrderStore((state) => state.setLabelGroupOrder);
   const defaultLabelKey = useSidebarOrderStore((state) => state.defaultLabelKey);
   const setDefaultLabelKey = useSidebarOrderStore((state) => state.setDefaultLabelKey);
   const snapshots = useMemo(
@@ -95,11 +99,18 @@ export function WorkspaceLabelManagerModal({
     }),
   );
 
+  const {
+    view: createView,
+    start: startCreate,
+    reset: resetCreate,
+  } = useWorkspaceLabelCreateFlow(snapshots);
+
   useEffect(() => {
     // Closing ends the edit, so reopening lands on the list rather than on whatever was half
     // typed a session ago.
     if (!visible) {
       model.reset();
+      resetCreate();
       return;
     }
     model.syncHosts(
@@ -111,7 +122,7 @@ export function WorkspaceLabelManagerModal({
         error: snapshots[host.serverId]?.error,
       })),
     );
-  }, [hosts, labelGroupOrder, model, snapshots, visible]);
+  }, [hosts, labelGroupOrder, model, resetCreate, snapshots, visible]);
   const state = useSyncExternalStore(model.subscribe, model.snapshot, model.snapshot);
   const draft = state.draft;
   const editing = state.editing;
@@ -140,40 +151,6 @@ export function WorkspaceLabelManagerModal({
       }),
     );
   }, [editing, model, t]);
-
-  // The list is the sidebar's group order, so dragging here reorders the sidebar's label groups.
-  // A filtered list hides labels the new order would have to place blind, so search turns it off.
-  const canReorder = state.query.trim() === "" && state.labels.length > 1;
-  const reorder = useCallback(
-    (labels: WorkspaceLabelDefinition[]) => {
-      setLabelGroupOrder(
-        mergeWithRemainder({
-          currentOrder: useSidebarOrderStore.getState().labelGroupOrder,
-          reorderedVisibleKeys: labels.map((label) => labelGroupKey(label.name)),
-        }),
-      );
-    },
-    [setLabelGroupOrder],
-  );
-  const renderDraggableLabel = useCallback(
-    ({
-      item: label,
-      drag,
-      isActive,
-      dragHandleProps,
-    }: DraggableRenderItemInfo<WorkspaceLabelDefinition>) => (
-      <WorkspaceLabelManagerRow
-        label={label}
-        isDefault={defaultLabelKey === workspaceLabelKey(label.name)}
-        disabled={disabled}
-        onEdit={edit}
-        drag={drag}
-        isDragging={isActive}
-        dragHandleProps={dragHandleProps}
-      />
-    ),
-    [defaultLabelKey, disabled, edit],
-  );
 
   const editingIsDefault = editing !== null && defaultLabelKey === workspaceLabelKey(editing.name);
   const setEditingDefault = useCallback(
@@ -235,78 +212,277 @@ export function WorkspaceLabelManagerModal({
     [disabled, isEditing, remove, save, state.dirty, state.pending, t],
   );
 
+  const startCreateForHost = useCallback(
+    () => startCreate(state.serverId),
+    [startCreate, state.serverId],
+  );
+  let body: ReactElement;
+  if (createView) {
+    body = createView.body;
+  } else if (draft && editing) {
+    body = (
+      <WorkspaceLabelEditView
+        draft={draft}
+        disabled={disabled}
+        error={state.error}
+        onChangeName={setDraftName}
+        onChangeColor={setDraftColor}
+        onSubmit={save}
+        isDefault={editingIsDefault}
+        onChangeDefault={setEditingDefault}
+      />
+    );
+  } else {
+    body = (
+      <WorkspaceLabelManagerListView
+        hosts={hosts}
+        state={state}
+        disabled={disabled}
+        defaultLabelKey={defaultLabelKey}
+        onSelectHost={selectHost}
+        onEdit={edit}
+        onCreate={startCreateForHost}
+      />
+    );
+  }
+
   return (
     <AdaptiveModalSheet
       visible={visible}
       onClose={onClose}
-      header={header}
-      footer={footer}
+      header={createView ? createView.header : header}
+      footer={createView ? createView.footer : footer}
       testID="workspace-label-manager"
     >
-      {draft && editing ? (
-        <WorkspaceLabelEditView
-          draft={draft}
-          disabled={disabled}
-          error={state.error}
-          onChangeName={setDraftName}
-          onChangeColor={setDraftColor}
-          onSubmit={save}
-          isDefault={editingIsDefault}
-          onChangeDefault={setEditingDefault}
-        />
-      ) : (
-        <>
-          {hosts.length > 1 ? (
-            <HostFilter
-              hosts={hosts}
-              selectedHost={state.serverId}
-              onSelectHost={selectHost}
-              includeAllHost={false}
-              triggerTestID="workspace-label-manager-host"
-              hostOptionTestID={managerHostOptionTestID}
-            />
-          ) : null}
-          <View style={styles.list}>
-            {canReorder ? (
-              <DraggableList
-                testID="workspace-label-manager-list"
-                data={state.labels}
-                keyExtractor={labelKeyExtractor}
-                renderItem={renderDraggableLabel}
-                onDragEnd={reorder}
-                scrollEnabled={false}
-                useDragHandle
-              />
-            ) : (
-              state.labels.map((label) => (
-                <WorkspaceLabelManagerRow
-                  key={workspaceLabelKey(label.name)}
-                  label={label}
-                  isDefault={defaultLabelKey === workspaceLabelKey(label.name)}
-                  disabled={disabled}
-                  onEdit={edit}
-                />
-              ))
-            )}
-            {state.labels.length === 0 ? (
-              <Text style={styles.muted}>{t("workspaceLabels.manage.empty")}</Text>
-            ) : null}
-          </View>
-          {state.host?.status === "offline" ? (
-            <Text style={styles.muted}>{t("workspaceLabels.manage.offline")}</Text>
-          ) : null}
-          {state.host?.status === "unsupported" ? (
-            <Text style={styles.muted}>{t("workspaceLabels.manage.updateHost")}</Text>
-          ) : null}
-          {(state.error ?? state.host?.error) ? (
-            <Text style={styles.error} testID="workspace-label-manager-error">
-              {state.error ?? state.host?.error}
-            </Text>
-          ) : null}
-        </>
-      )}
+      {body}
     </AdaptiveModalSheet>
   );
+}
+
+function WorkspaceLabelManagerListView(props: {
+  hosts: ReturnType<typeof useHosts>;
+  state: WorkspaceLabelManagerSnapshot;
+  disabled: boolean;
+  defaultLabelKey: string | null;
+  onSelectHost: (serverId: string) => void;
+  onEdit: (label: WorkspaceLabelDefinition) => void;
+  onCreate: () => void;
+}): ReactElement {
+  const { t } = useTranslation();
+  const setLabelGroupOrder = useSidebarOrderStore((store) => store.setLabelGroupOrder);
+  // The list is the sidebar's group order, so dragging here reorders the sidebar's label groups.
+  // A filtered list hides labels the new order would have to place blind, so search turns it off.
+  const canReorder = props.state.query.trim() === "" && props.state.labels.length > 1;
+  const reorder = useCallback(
+    (labels: WorkspaceLabelDefinition[]) => {
+      setLabelGroupOrder(
+        mergeWithRemainder({
+          currentOrder: useSidebarOrderStore.getState().labelGroupOrder,
+          reorderedVisibleKeys: labels.map((label) => labelGroupKey(label.name)),
+        }),
+      );
+    },
+    [setLabelGroupOrder],
+  );
+  const renderDraggableLabel = useCallback(
+    ({
+      item: label,
+      drag,
+      isActive,
+      dragHandleProps,
+    }: DraggableRenderItemInfo<WorkspaceLabelDefinition>) => (
+      <WorkspaceLabelManagerRow
+        label={label}
+        isDefault={props.defaultLabelKey === workspaceLabelKey(label.name)}
+        disabled={props.disabled}
+        onEdit={props.onEdit}
+        drag={drag}
+        isDragging={isActive}
+        dragHandleProps={dragHandleProps}
+      />
+    ),
+    [props.defaultLabelKey, props.disabled, props.onEdit],
+  );
+  const hostError = props.state.error ?? props.state.host?.error;
+
+  return (
+    <>
+      {props.hosts.length > 1 ? (
+        <HostFilter
+          hosts={props.hosts}
+          selectedHost={props.state.serverId}
+          onSelectHost={props.onSelectHost}
+          includeAllHost={false}
+          triggerTestID="workspace-label-manager-host"
+          hostOptionTestID={managerHostOptionTestID}
+        />
+      ) : null}
+      <View style={styles.list}>
+        {canReorder ? (
+          <DraggableList
+            testID="workspace-label-manager-list"
+            data={props.state.labels}
+            keyExtractor={labelKeyExtractor}
+            renderItem={renderDraggableLabel}
+            onDragEnd={reorder}
+            scrollEnabled={false}
+            useDragHandle
+          />
+        ) : (
+          props.state.labels.map((label) => (
+            <WorkspaceLabelManagerRow
+              key={workspaceLabelKey(label.name)}
+              label={label}
+              isDefault={props.defaultLabelKey === workspaceLabelKey(label.name)}
+              disabled={props.disabled}
+              onEdit={props.onEdit}
+            />
+          ))
+        )}
+        {props.state.labels.length === 0 ? (
+          <Text style={styles.muted}>{t("workspaceLabels.manage.empty")}</Text>
+        ) : null}
+      </View>
+      <View style={styles.createRow}>
+        <Button
+          variant="ghost"
+          size="sm"
+          leftIcon={Plus}
+          disabled={props.state.host?.status !== "online"}
+          onPress={props.onCreate}
+          testID="workspace-label-manager-create"
+        >
+          {t("workspaceLabels.create")}
+        </Button>
+      </View>
+      {props.state.host?.status === "offline" ? (
+        <Text style={styles.muted}>{t("workspaceLabels.manage.offline")}</Text>
+      ) : null}
+      {props.state.host?.status === "unsupported" ? (
+        <Text style={styles.muted}>{t("workspaceLabels.manage.updateHost")}</Text>
+      ) : null}
+      {hostError ? (
+        <Text style={styles.error} testID="workspace-label-manager-error">
+          {hostError}
+        </Text>
+      ) : null}
+    </>
+  );
+}
+
+interface WorkspaceLabelCreateDraft {
+  serverId: string;
+  name: string;
+  color: WorkspaceLabelColor;
+}
+
+/**
+ * Creating a label, as a third view of the sheet: its own header, body and footer, so the
+ * manager only has to ask whether it is open.
+ */
+function useWorkspaceLabelCreateFlow(
+  snapshots: Readonly<Record<string, { status: string } | undefined>>,
+) {
+  const { t } = useTranslation();
+  const isCompact = useIsCompactFormFactor();
+  const [draft, setDraft] = useState<WorkspaceLabelCreateDraft | null>(null);
+  const [pending, setPending] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  const start = useCallback((serverId: string) => {
+    setError(null);
+    setDraft({ serverId, name: "", color: WORKSPACE_LABEL_COLORS[0] });
+  }, []);
+  const reset = useCallback(() => {
+    setError(null);
+    setDraft(null);
+  }, []);
+  const setName = useCallback(
+    (name: string) => setDraft((current) => (current ? { ...current, name } : current)),
+    [],
+  );
+  const setColor = useCallback(
+    (color: WorkspaceLabelColor) =>
+      setDraft((current) => (current ? { ...current, color } : current)),
+    [],
+  );
+  const name = draft ? normalizeWorkspaceLabelName(draft.name) : "";
+  const submit = useCallback(() => {
+    if (!draft || !name || pending) return;
+    const carrier = [
+      ...(useSessionStore.getState().sessions[draft.serverId]?.workspaces.values() ?? []),
+    ].find((workspace) => workspace.archivingAt === null);
+    if (!carrier) {
+      setError(t("workspaceLabels.manage.needsWorkspace"));
+      return;
+    }
+    setPending(true);
+    setError(null);
+    workspaceLabels
+      .create({
+        serverId: draft.serverId,
+        label: { name, color: draft.color },
+        carrierWorkspaceId: carrier.id,
+      })
+      .then(() => setDraft(null))
+      .catch((cause: unknown) => setError(workspaceLabelErrorMessage(cause)))
+      .finally(() => setPending(false));
+  }, [draft, name, pending, t]);
+
+  const online = draft ? snapshots[draft.serverId]?.status === "online" : false;
+  const view = useMemo(() => {
+    if (!draft) return null;
+    const header: SheetHeader = { title: t("workspaceLabels.create"), back: { onPress: reset } };
+    const footer = (
+      <View style={styles.footer}>
+        <View />
+        <Button
+          size="md"
+          style={styles.saveButton}
+          disabled={!online || !name}
+          loading={pending}
+          onPress={submit}
+          testID="workspace-label-manager-create-submit"
+        >
+          {t("workspaceLabels.createConfirm")}
+        </Button>
+      </View>
+    );
+    const body = (
+      <>
+        <Field label={t("workspaceLabels.manage.name")}>
+          <FormTextInput
+            size={isCompact ? "md" : "sm"}
+            initialValue=""
+            onChangeText={setName}
+            onSubmitEditing={submit}
+            editable={!pending}
+            autoFocus
+            autoCapitalize="none"
+            autoCorrect={false}
+            accessibilityLabel={t("workspaceLabels.manage.name")}
+            testID="workspace-label-manager-create-name"
+          />
+        </Field>
+        <Field label={t("workspaceLabels.manage.color")}>
+          <WorkspaceLabelSwatchRow
+            value={draft.color}
+            onChange={setColor}
+            disabled={pending}
+            testID="workspace-label-manager-create-colors"
+          />
+        </Field>
+        {error ? (
+          <Text style={styles.error} testID="workspace-label-manager-create-error">
+            {error}
+          </Text>
+        ) : null}
+      </>
+    );
+    return { header, footer, body };
+  }, [draft, error, isCompact, name, online, pending, reset, setColor, setName, submit, t]);
+
+  return { view, start, reset };
 }
 
 const managerHostOptionTestID = (serverId: string) => `workspace-label-manager-host-${serverId}`;
@@ -540,5 +716,8 @@ const styles = StyleSheet.create((theme) => ({
   },
   saveButton: {
     minWidth: 112,
+  },
+  createRow: {
+    flexDirection: "row",
   },
 }));

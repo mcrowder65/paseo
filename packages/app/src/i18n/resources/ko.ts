@@ -1154,6 +1154,8 @@ export const ko: TranslationResources = {
       defaultLabel: "기본 레이블",
       defaultLabelHint:
         "레이블이 없는 워크스페이스는 이 레이블 아래에 표시되고, 새 워크스페이스에는 이 레이블이 지정됩니다.",
+      exists: "이 이름의 레이블이 이미 있습니다.",
+      needsWorkspace: "레이블을 만들기 전에 이 호스트에 워크스페이스를 추가하세요.",
     },
   },
   changelog: {

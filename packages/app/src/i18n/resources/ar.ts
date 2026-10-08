@@ -1147,6 +1147,8 @@ export const ar: TranslationResources = {
       defaultLabel: "التسمية الافتراضية",
       defaultLabelHint:
         "تظهر مساحات العمل بلا تسمية تحت هذه التسمية، وتحصل عليها مساحات العمل الجديدة.",
+      exists: "توجد تسمية بهذا الاسم بالفعل.",
+      needsWorkspace: "أضف مساحة عمل على هذا المضيف قبل إنشاء تسمية.",
     },
   },
   changelog: {
