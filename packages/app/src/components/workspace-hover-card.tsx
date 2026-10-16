@@ -1,5 +1,6 @@
 import {
   useCallback,
+  useMemo,
   useState,
   type PropsWithChildren,
   type ReactElement,
@@ -87,6 +88,10 @@ function WorkspaceHoverCardContent({
   prHint: PrHint | null;
 }): ReactElement {
   const { t } = useTranslation();
+  const urlTarget = useMemo(
+    () => ({ serverId: workspace.serverId, workspaceId: workspace.workspaceId }),
+    [workspace.serverId, workspace.workspaceId],
+  );
   return (
     <>
       <View style={styles.cardHeader}>
@@ -94,7 +99,7 @@ function WorkspaceHoverCardContent({
           {workspace.name}
         </Text>
       </View>
-      {prHint ? <PrBadge hint={prHint} style={styles.cardInfoRow} /> : null}
+      {prHint ? <PrBadge hint={prHint} style={styles.cardInfoRow} workspace={urlTarget} /> : null}
       {workspace.diffStat ? (
         <View style={styles.cardInfoRow}>
           <ThemedFileDiff size={12} uniProps={foregroundMutedColorMapping} />

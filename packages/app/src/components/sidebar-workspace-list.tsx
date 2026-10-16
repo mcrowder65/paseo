@@ -115,7 +115,10 @@ import {
   SidebarFilterEmptyState,
   SidebarProjectEmptyState,
 } from "@/components/sidebar/empty-states";
-import { selectWorkspaceServiceSummary } from "@/components/sidebar/workspace-meta-row";
+import {
+  selectWorkspaceServiceSummary,
+  type WorkspaceUrlTarget,
+} from "@/components/sidebar/workspace-meta-row";
 import {
   SidebarWorkspaceTrailingContent,
   useSidebarWorkspaceTrailing,
@@ -137,6 +140,7 @@ import {
 } from "@/utils/sidebar-project-row-model";
 import { redirectIfArchivingActiveWorkspace } from "@/utils/sidebar-workspace-archive-redirect";
 import { openExternalUrl } from "@/utils/open-external-url";
+import { openWorkspaceUrl } from "@/utils/open-workspace-url";
 import { useWorkspaceArchive } from "@/workspace/use-workspace-archive";
 import {
   getCurrentProjectRemoveReadiness,
@@ -294,7 +298,16 @@ interface WorkspaceRowInnerProps {
   reserveIdleStatusIndicatorSpace?: boolean;
 }
 
-export function PrBadge({ hint, style }: { hint: PrHint; style?: StyleProp<ViewStyle> }) {
+export function PrBadge({
+  hint,
+  style,
+  workspace,
+}: {
+  hint: PrHint;
+  style?: StyleProp<ViewStyle>;
+  /** Where the change request opens in the Paseo browser; without it the link opens externally. */
+  workspace?: WorkspaceUrlTarget;
+}) {
   const { t } = useTranslation();
   const [isHovered, setIsHovered] = useState(false);
 
@@ -305,9 +318,13 @@ export function PrBadge({ hint, style }: { hint: PrHint; style?: StyleProp<ViewS
   const handlePress = useCallback(
     (event: GestureResponderEvent) => {
       event.stopPropagation();
+      if (workspace) {
+        void openWorkspaceUrl({ ...workspace, url: hint.url });
+        return;
+      }
       void openExternalUrl(hint.url);
     },
-    [hint.url],
+    [hint.url, workspace],
   );
 
   const handleHoverIn = useCallback(() => setIsHovered(true), []);

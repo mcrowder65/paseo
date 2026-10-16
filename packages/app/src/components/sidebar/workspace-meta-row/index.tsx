@@ -13,6 +13,7 @@ import { WorkspaceLabelChip, WORKSPACE_LABEL_CHIP_INSET } from "@/workspace-labe
 import type { PrHint } from "@/git/pr-hint";
 import { getForgePresentation, normalizeForge } from "@/git/forge";
 import { openExternalUrl } from "@/utils/open-external-url";
+import { openWorkspaceUrl } from "@/utils/open-workspace-url";
 import { useSidebarMetaPreferences } from "@/components/sidebar/display-preferences/model";
 import type { Theme } from "@/styles/theme";
 import { PullRequestStateIcon } from "@/git/pull-request-state-icon";
@@ -33,6 +34,11 @@ export {
  * owns the size because it is the one item that also appears off this line.
  */
 const META_ICON_SIZE = HOST_BADGE_ICON_SIZE;
+
+export interface WorkspaceUrlTarget {
+  serverId: string;
+  workspaceId: string;
+}
 
 const ThemedExternalLink = withUnistyles(ExternalLink);
 const ThemedFolder = withUnistyles(Folder);
@@ -67,6 +73,7 @@ export function WorkspaceMetaRow({
   prHint,
   serviceSummary,
   labels = EMPTY_LABELS,
+  workspace,
 }: {
   currentBranch: string | null;
   projectName: string | null;
@@ -74,6 +81,8 @@ export function WorkspaceMetaRow({
   prHint: PrHint | null;
   serviceSummary: WorkspaceServiceSummary | null;
   labels?: readonly WorkspaceLabelDefinition[];
+  /** Where a change request opens in the Paseo browser; without it the link opens externally. */
+  workspace?: WorkspaceUrlTarget;
 }) {
   const { rowItems, checksDisplay } = useSidebarMetaPreferences();
   const items = selectMetaRowItems({
@@ -94,7 +103,12 @@ export function WorkspaceMetaRow({
       {items.map((item, index) => (
         <Fragment key={item.kind}>
           {index > 0 ? <Text style={styles.separator}>·</Text> : null}
-          <MetaItemNode item={item} hostBadge={hostBadge} leading={index === 0} />
+          <MetaItemNode
+            item={item}
+            hostBadge={hostBadge}
+            leading={index === 0}
+            workspace={workspace}
+          />
         </Fragment>
       ))}
     </View>
@@ -105,9 +119,11 @@ function MetaItemNode({
   item,
   hostBadge,
   leading,
+  workspace,
 }: {
   item: MetaRowItem;
   hostBadge: HostBadgeModel | null;
+  workspace: WorkspaceUrlTarget | undefined;
   /** First on the line, so this item's ink sets the rail the title above it already uses. */
   leading: boolean;
 }): ReactNode {
@@ -121,7 +137,7 @@ function MetaItemNode({
     return hostBadge ? <HostBadge badge={hostBadge} /> : null;
   }
   if (item.kind === "changeRequest") {
-    return <PullRequestItem hint={item.hint} />;
+    return <PullRequestItem hint={item.hint} workspace={workspace} />;
   }
   if (item.kind === "checks") {
     return <ChecksItem summary={item.summary} label={item.label} />;
@@ -185,7 +201,13 @@ function LabelsItem({
  * inside it, so there is no second hover state machine to fight. Both icons are the same
  * size, so the swap can't move the target out from under the cursor.
  */
-function PullRequestItem({ hint }: { hint: PrHint }) {
+function PullRequestItem({
+  hint,
+  workspace,
+}: {
+  hint: PrHint;
+  workspace: WorkspaceUrlTarget | undefined;
+}) {
   const { t } = useTranslation();
   const [isHovered, setIsHovered] = useState(false);
   const presentation = getForgePresentation(normalizeForge(hint.forge));
@@ -193,9 +215,13 @@ function PullRequestItem({ hint }: { hint: PrHint }) {
   const handlePress = useCallback(
     (event: GestureResponderEvent) => {
       event.stopPropagation();
+      if (workspace) {
+        void openWorkspaceUrl({ ...workspace, url: hint.url });
+        return;
+      }
       void openExternalUrl(hint.url);
     },
-    [hint.url],
+    [hint.url, workspace],
   );
   const handlePressIn = useCallback((event: GestureResponderEvent) => event.stopPropagation(), []);
   const handleHoverIn = useCallback(() => setIsHovered(true), []);

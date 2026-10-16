@@ -124,6 +124,10 @@ export const SidebarWorkspaceRowContent = memo(function SidebarWorkspaceRowConte
   // The workspace carries label names; their colors live in its host's catalog, so the row is
   // where the two meet — the meta line is handed finished definitions.
   const labels = useWorkspaceLabelDefinitions(workspace.serverId, workspace.labels);
+  const urlTarget = useMemo(
+    () => ({ serverId: workspace.serverId, workspaceId: workspace.workspaceId }),
+    [workspace.serverId, workspace.workspaceId],
+  );
   const workspaceBranchTextStyle = useMemo(
     () => [
       styles.workspaceBranchText,
@@ -168,6 +172,7 @@ export const SidebarWorkspaceRowContent = memo(function SidebarWorkspaceRowConte
             prHint={workspace.prHint}
             serviceSummary={serviceSummary}
             labels={labels}
+            workspace={urlTarget}
           />
         </View>
       </View>
