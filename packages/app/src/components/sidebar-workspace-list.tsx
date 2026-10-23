@@ -91,7 +91,10 @@ import { hasVisibleOrderChanged, mergeWithRemainder } from "@/utils/sidebar-reor
 import { confirmDialog } from "@/utils/confirm-dialog";
 import type { SidebarStateBucket } from "@/utils/sidebar-agent-state";
 import { SidebarStatusWorkspaceList } from "@/components/sidebar/sidebar-status-list";
-import type { SidebarWorkspaceGroup } from "@/components/sidebar/sidebar-labels";
+import {
+  labelKeyOfGroupKey,
+  type SidebarWorkspaceGroup,
+} from "@/components/sidebar/sidebar-labels";
 import {
   SidebarWorkspaceContextMenu,
   SidebarWorkspaceMenu,
@@ -1946,6 +1949,7 @@ export function SidebarWorkspaceList({
   const content =
     groupMode !== "project" ? (
       <SidebarGroupedModeList
+        groupMode={groupMode}
         workspaceGroups={workspaceGroups}
         pinnedGroups={pinnedGroups}
         workspaceEntriesByKey={workspaceEntriesByKey}
@@ -1998,6 +2002,7 @@ export function SidebarWorkspaceList({
  * above it was status-only.
  */
 function SidebarGroupedModeList({
+  groupMode,
   workspaceGroups,
   pinnedGroups,
   workspaceEntriesByKey,
@@ -2013,6 +2018,7 @@ function SidebarGroupedModeList({
   parentGestureRef,
   dragGestureHostActive,
 }: {
+  groupMode: SidebarGroupMode;
   workspaceGroups: SidebarWorkspaceGroup[];
   pinnedGroups: PinnedSidebarGroups;
   workspaceEntriesByKey: ReadonlyMap<string, SidebarWorkspaceEntry>;
@@ -2029,6 +2035,8 @@ function SidebarGroupedModeList({
   dragGestureHostActive?: boolean;
 }) {
   const showShortcutBadges = useShowShortcutBadges();
+  const getLabelOrder = useSidebarOrderStore((state) => state.getLabelOrder);
+  const setLabelOrder = useSidebarOrderStore((state) => state.setLabelOrder);
   const pinnedWorkspaces = useMemo(
     () =>
       pinnedGroups.pinnedChats.flatMap((workspace) => {
@@ -2036,6 +2044,18 @@ function SidebarGroupedModeList({
         return entry ? [entry] : [];
       }),
     [pinnedGroups.pinnedChats, workspaceEntriesByKey],
+  );
+
+  const handleGroupReorder = useCallback(
+    (reorderedGroups: SidebarWorkspaceGroup[]) => {
+      const reorderedLabelKeys = reorderedGroups.map((group) => labelKeyOfGroupKey(group.key));
+      const currentOrder = getLabelOrder();
+      if (!hasVisibleOrderChanged({ currentOrder, reorderedVisibleKeys: reorderedLabelKeys })) {
+        return;
+      }
+      setLabelOrder(mergeWithRemainder({ currentOrder, reorderedVisibleKeys: reorderedLabelKeys }));
+    },
+    [getLabelOrder, setLabelOrder],
   );
 
   return (
@@ -2054,6 +2074,7 @@ function SidebarGroupedModeList({
       sidebarFilterEmpty={sidebarFilterEmpty}
       parentGestureRef={parentGestureRef}
       dragGestureHostActive={dragGestureHostActive}
+      onGroupReorder={groupMode === "label" ? handleGroupReorder : undefined}
     />
   );
 }

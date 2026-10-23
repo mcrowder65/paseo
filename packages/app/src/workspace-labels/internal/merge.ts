@@ -22,7 +22,12 @@ export function mergeWorkspaceLabelCatalogs(input: {
       if (!merged.has(key)) merged.set(key, label);
     }
   }
-  return [...merged.values()].sort((left, right) =>
-    left.name.localeCompare(right.name, undefined, { sensitivity: "base" }),
-  );
+  return [...merged.values()].sort(compareWorkspaceLabelNames);
+}
+
+export function compareWorkspaceLabelNames(
+  left: WorkspaceLabelDefinition,
+  right: WorkspaceLabelDefinition,
+): number {
+  return left.name.localeCompare(right.name, undefined, { sensitivity: "base" });
 }

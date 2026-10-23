@@ -6,9 +6,11 @@ import {
 import { useMemo } from "react";
 import { create } from "zustand";
 import { HostWorkspaceLabelReplica } from "./internal/host-replica";
-import { mergeWorkspaceLabelCatalogs } from "./internal/merge";
+import { compareWorkspaceLabelNames, mergeWorkspaceLabelCatalogs } from "./internal/merge";
 import { WorkspaceLabelManagerModel, WorkspaceLabelPickerModel } from "./internal/workflow-model";
 import { i18n } from "@/i18n/i18next";
+import { applyStoredOrdering } from "@/hooks/sidebar-workspaces-view-model";
+import { useSidebarOrderStore } from "@/stores/sidebar-order-store";
 
 export { buildWorkspaceLabelPickerRows } from "./internal/picker-model";
 export type { WorkspaceLabelPickerRow } from "./internal/picker-model";
@@ -70,25 +72,49 @@ export function hasAuthoritativeWorkspaceLabelCatalog(
   );
 }
 
+/** `labelOrder` holds `workspaceLabelKey`s; labels it does not name keep their own slot. */
 export function projectWorkspaceLabels(
   hostsById: Readonly<Record<string, WorkspaceLabelHostSnapshot>>,
   targetServerId?: string,
+  labelOrder: string[] = [],
 ): WorkspaceLabelProjection {
-  const hosts = Object.values(hostsById);
+  const hosts = Object.values(hostsById).map(
+    (host): WorkspaceLabelHostSnapshot => ({
+      serverId: host.serverId,
+      labels: orderLabels([...host.labels].sort(compareWorkspaceLabelNames), labelOrder),
+      status: host.status,
+      error: host.error,
+    }),
+  );
   const catalogs = hosts
     .filter((host) => host.status === "online")
     .map((host) => ({ serverId: host.serverId, labels: host.labels }));
   return {
     hosts,
-    labels: mergeWorkspaceLabelCatalogs({ catalogs, targetServerId }),
-    targetHost: targetServerId ? hostsById[targetServerId] : undefined,
+    labels: orderLabels(mergeWorkspaceLabelCatalogs({ catalogs, targetServerId }), labelOrder),
+    targetHost: targetServerId ? hosts.find((host) => host.serverId === targetServerId) : undefined,
   };
+}
+
+function orderLabels(
+  labels: WorkspaceLabelDefinition[],
+  labelOrder: string[],
+): WorkspaceLabelDefinition[] {
+  return applyStoredOrdering({
+    items: labels,
+    storedOrder: labelOrder,
+    getKey: (label) => workspaceLabelKey(label.name),
+  });
 }
 
 /** Reactive cross-host projection. Consumers do not reconstruct replica eligibility or precedence. */
 export function useWorkspaceLabelProjection(targetServerId?: string): WorkspaceLabelProjection {
   const hosts = useWorkspaceLabels((state) => state.hosts);
-  return useMemo(() => projectWorkspaceLabels(hosts, targetServerId), [hosts, targetServerId]);
+  const labelOrder = useSidebarOrderStore((state) => state.labelOrder);
+  return useMemo(
+    () => projectWorkspaceLabels(hosts, targetServerId, labelOrder),
+    [hosts, labelOrder, targetServerId],
+  );
 }
 
 /**
@@ -216,7 +242,15 @@ class WorkspaceLabelsController {
     newName?: string;
     color?: WorkspaceLabelDefinition["color"];
   }) {
-    return this.mutate(input.serverId, (client) => client.updateWorkspaceLabel(input));
+    const result = await this.mutate(input.serverId, (client) =>
+      client.updateWorkspaceLabel(input),
+    );
+    if (input.newName) {
+      useSidebarOrderStore
+        .getState()
+        .renameLabelInOrder(workspaceLabelKey(input.name), workspaceLabelKey(input.newName));
+    }
+    return result;
   }
 
   async delete(input: { serverId: string; name: string }) {

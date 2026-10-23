@@ -55,6 +55,8 @@ export interface SidebarWorkspaceEntry extends SidebarStatusWorkspacePlacement {
   archiveUnpushedCommitCount: number | null;
   scripts: WorkspaceDescriptor["scripts"];
   hasRunningScripts: boolean;
+  createdAt: Date | null;
+  lastUserMessageAt: Date | null;
 }
 
 export interface SidebarProjectEntry {
@@ -180,6 +182,8 @@ export function createSidebarWorkspaceEntry(input: {
     archiveUnpushedCommitCount: input.workspace.gitRuntime?.aheadOfOrigin ?? null,
     scripts: input.workspace.scripts,
     hasRunningScripts: input.workspace.scripts.some((script) => script.lifecycle === "running"),
+    createdAt: input.workspace.createdAt,
+    lastUserMessageAt: input.workspace.lastUserMessageAt,
   };
 }
 

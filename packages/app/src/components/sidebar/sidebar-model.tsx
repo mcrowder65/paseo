@@ -18,7 +18,11 @@ import { useSidebarOrderStore } from "@/stores/sidebar-order-store";
 import type { SidebarShortcutModel } from "@/utils/sidebar-shortcuts";
 import { buildSidebarProjection } from "./sidebar-projection";
 import type { SidebarProjectIconTarget } from "@/utils/sidebar-project-row-model";
-import { filterWorkspacesByLabels, type SidebarWorkspaceGroup } from "./sidebar-labels";
+import {
+  filterWorkspacesByLabels,
+  selectGroupLabelDefinitions,
+  type SidebarWorkspaceGroup,
+} from "./sidebar-labels";
 import { filterWorkspacesByProjects, resolveActiveProjectFilters } from "./sidebar-project-filter";
 import {
   hasAuthoritativeWorkspaceLabelCatalog,
@@ -62,7 +66,7 @@ export function SidebarModelProvider({
   const labelFilter = useSidebarViewStore((state) => state.labelFilter);
   const projectFilters = useSidebarViewStore((state) => state.projectFilters);
   const reconcileLabelFilter = useSidebarViewStore((state) => state.reconcileLabelFilter);
-  const { hosts: labelHosts } = useWorkspaceLabelProjection();
+  const { hosts: labelHosts, labels: labelDefinitions } = useWorkspaceLabelProjection();
   const collapsedProjectKeys = useSidebarCollapsedSectionsStore(
     (state) => state.collapsedProjectKeys,
   );
@@ -147,6 +151,15 @@ export function SidebarModelProvider({
     list.projects,
     visibleWorkspaceKeys,
   ]);
+  const groupLabelDefinitions = useMemo(
+    () =>
+      selectGroupLabelDefinitions({
+        labels: labelDefinitions,
+        hosts: labelHosts,
+        serverIds: list.serverIds,
+      }),
+    [labelDefinitions, labelHosts, list.serverIds],
+  );
   const pinnedKeys = usePinnedSidebarKeys(filteredProjects);
   const projectionInput = useMemo(
     () => ({
@@ -156,6 +169,9 @@ export function SidebarModelProvider({
       workspaceEntriesByKey: filteredWorkspaceEntriesByKey,
       projectNamesByViewKey: list.projectNamesByViewKey,
       groupMode,
+      labelDefinitions: groupLabelDefinitions,
+      workspaceSort: list.workspaceSort,
+      labelFilter,
       pinnedCollapsed,
       collapsedProjectKeys,
       collapsedWorkspaceGroupKeys,
@@ -165,6 +181,9 @@ export function SidebarModelProvider({
       collapsedProjectKeys,
       collapsedWorkspaceGroupKeys,
       groupMode,
+      groupLabelDefinitions,
+      list.workspaceSort,
+      labelFilter,
       list.projectNamesByViewKey,
       filteredProjects,
       pinnedCollapsed,

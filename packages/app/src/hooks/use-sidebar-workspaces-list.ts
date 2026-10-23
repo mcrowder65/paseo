@@ -21,6 +21,7 @@ import {
   type SidebarWorkspacePlacement,
 } from "./sidebar-workspaces-view-model";
 import type { SidebarStateBucket } from "@/utils/sidebar-agent-state";
+import type { WorkspaceSort } from "@/projects/workspace-structure";
 
 export {
   appendMissingOrderKeys,
@@ -87,6 +88,9 @@ const EMPTY_PROJECT_NAMES = new Map<string, string>();
 
 export interface SidebarWorkspacesListResult {
   workspaceSortSupported: boolean;
+  /** The sort rows are ordered by, unset in Status mode or when a host predates sort times. */
+  workspaceSort: WorkspaceSort | undefined;
+  serverIds: string[];
   workspacePlacements: SidebarWorkspacePlacement[];
   projects: SidebarProjectEntry[];
   projectNamesByViewKey: Map<string, string>;
@@ -144,7 +148,7 @@ export function useSidebarWorkspacesList(options?: {
   const groupMode = useSidebarViewStore((state) => state.groupMode);
   const sortSupport = useHostFeatureMap(directoryServerIds, "workspaceSortTimes");
   const workspaceSortSupported = [...sortSupport.values()].every(Boolean);
-  const sort = workspaceSortSupported && groupMode === "project" ? workspaceSort : undefined;
+  const sort = workspaceSortSupported && groupMode !== "status" ? workspaceSort : undefined;
   const { projects: hostProjects } = useWorkspaceStructure(directoryServerIds, sort);
 
   const selectPlacements = useMemo(createSidebarWorkspacePlacementSelector, []);
@@ -194,6 +198,8 @@ export function useSidebarWorkspacesList(options?: {
 
   return {
     workspaceSortSupported,
+    workspaceSort: sort,
+    serverIds,
     workspacePlacements,
     projects,
     projectNamesByViewKey,
