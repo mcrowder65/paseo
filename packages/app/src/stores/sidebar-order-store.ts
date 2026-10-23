@@ -7,15 +7,20 @@ import { createValidatedPersistStorage } from "@/storage/validated-persist-stora
 interface SidebarOrderStoreState {
   projectOrder: string[];
   pinnedWorkspaceOrder: string[];
+  labelOrder: string[];
   getProjectOrder: () => string[];
   setProjectOrder: (keys: string[]) => void;
   getPinnedWorkspaceOrder: () => string[];
   setPinnedWorkspaceOrder: (keys: string[]) => void;
+  getLabelOrder: () => string[];
+  setLabelOrder: (keys: string[]) => void;
+  renameLabelInOrder: (fromKey: string, toKey: string) => void;
 }
 
 interface SidebarOrderPersistedState {
   projectOrder?: string[];
   pinnedWorkspaceOrder?: string[];
+  labelOrder?: string[];
   workspaceOrderByProject?: Record<string, string[]>;
   projectOrderByServerId?: Record<string, string[]>;
   workspaceOrderByServerAndProject?: Record<string, string[]>;
@@ -25,6 +30,7 @@ const StringArrayRecordSchema = z.record(z.string(), z.array(z.string()));
 const SidebarOrderPersistedStateSchema = z.strictObject({
   projectOrder: z.array(z.string()).optional(),
   pinnedWorkspaceOrder: z.array(z.string()).optional(),
+  labelOrder: z.array(z.string()).optional(),
   // COMPAT(automaticWorkspaceOrder): v0.13.0; accept discarded keys until 2027-04-22 so strict parsing preserves projects/pins.
   workspaceOrderByProject: StringArrayRecordSchema.optional(),
   projectOrderByServerId: StringArrayRecordSchema.optional(),
@@ -74,10 +80,11 @@ function dedupeKeys(keys: string[]): string[] {
 export function migrateSidebarOrderState(persistedState: unknown): {
   projectOrder: string[];
   pinnedWorkspaceOrder: string[];
+  labelOrder: string[];
 } {
   const result = SidebarOrderPersistedStateSchema.safeParse(persistedState);
   if (!result.success) {
-    return { projectOrder: [], pinnedWorkspaceOrder: [] };
+    return { projectOrder: [], pinnedWorkspaceOrder: [], labelOrder: [] };
   }
   const state: SidebarOrderPersistedState = result.data;
 
@@ -94,6 +101,7 @@ export function migrateSidebarOrderState(persistedState: unknown): {
   return {
     projectOrder,
     pinnedWorkspaceOrder: dedupeKeys(state.pinnedWorkspaceOrder ?? []),
+    labelOrder: dedupeKeys(state.labelOrder ?? []),
   };
 }
 
@@ -102,6 +110,7 @@ export const useSidebarOrderStore = create<SidebarOrderStoreState>()(
     (set, get) => ({
       projectOrder: [],
       pinnedWorkspaceOrder: [],
+      labelOrder: [],
       getProjectOrder: () => get().projectOrder,
       setProjectOrder: (keys) => {
         set({ projectOrder: dedupeKeys(keys) });
@@ -110,6 +119,15 @@ export const useSidebarOrderStore = create<SidebarOrderStoreState>()(
       setPinnedWorkspaceOrder: (keys) => {
         set({ pinnedWorkspaceOrder: dedupeKeys(keys) });
       },
+      getLabelOrder: () => get().labelOrder,
+      setLabelOrder: (keys) => {
+        set({ labelOrder: dedupeKeys(keys) });
+      },
+      renameLabelInOrder: (fromKey, toKey) => {
+        set((state) => ({
+          labelOrder: dedupeKeys(state.labelOrder.map((key) => (key === fromKey ? toKey : key))),
+        }));
+      },
     }),
     {
       name: "sidebar-project-workspace-order",
@@ -117,6 +135,7 @@ export const useSidebarOrderStore = create<SidebarOrderStoreState>()(
       partialize: (state) => ({
         projectOrder: state.projectOrder,
         pinnedWorkspaceOrder: state.pinnedWorkspaceOrder,
+        labelOrder: state.labelOrder,
       }),
       version: 2,
       migrate: migrateSidebarOrderState,

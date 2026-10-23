@@ -215,7 +215,7 @@ function compareWorkspaceStructureItems(left: WorkspaceSortItem, right: Workspac
 }
 
 function workspaceSortTime(
-  workspace: WorkspaceDescriptor,
+  workspace: Pick<WorkspaceDescriptor, "createdAt" | "lastUserMessageAt">,
   sort: WorkspaceSort | undefined,
 ): number {
   if (!sort) return 0;
@@ -228,4 +228,32 @@ function workspaceSortTime(
 
 function compareWorkspaceTimes(left: WorkspaceSortItem, right: WorkspaceSortItem): number {
   return right.sortTime - left.sortTime || left.workspaceKey.localeCompare(right.workspaceKey);
+}
+
+interface SortableWorkspace extends Pick<WorkspaceDescriptor, "createdAt" | "lastUserMessageAt"> {
+  name: string;
+  workspaceKey: string;
+}
+
+export function compareWorkspacesBySort(
+  left: SortableWorkspace,
+  right: SortableWorkspace,
+  sort: WorkspaceSort | undefined,
+): number {
+  const leftItem = toSortItem(left, sort);
+  const rightItem = toSortItem(right, sort);
+  return sort
+    ? compareWorkspaceTimes(leftItem, rightItem)
+    : compareWorkspaceStructureItems(leftItem, rightItem);
+}
+
+function toSortItem(
+  workspace: SortableWorkspace,
+  sort: WorkspaceSort | undefined,
+): WorkspaceSortItem {
+  return {
+    workspaceName: workspace.name,
+    workspaceKey: workspace.workspaceKey,
+    sortTime: workspaceSortTime(workspace, sort),
+  };
 }

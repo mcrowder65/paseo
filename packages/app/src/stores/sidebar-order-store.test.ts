@@ -21,7 +21,23 @@ describe("migrateSidebarOrderState", () => {
     expect(migrated).toEqual({
       projectOrder: ["project-a"],
       pinnedWorkspaceOrder: [],
+      labelOrder: [],
     });
+  });
+
+  it("deduplicates label order", () => {
+    const migrated = migrateSidebarOrderState({
+      labelOrder: ["urgent", "urgent", "", "backend"],
+    });
+
+    expect(migrated.labelOrder).toEqual(["urgent", "backend"]);
+  });
+
+  it("moves a renamed label's key in place", () => {
+    useSidebarOrderStore.setState({ labelOrder: ["done", "review", "backlog"] });
+    useSidebarOrderStore.getState().renameLabelInOrder("review", "in review");
+
+    expect(useSidebarOrderStore.getState().labelOrder).toEqual(["done", "in review", "backlog"]);
   });
 
   it("deduplicates pinned workspace order without rewriting identities", () => {
@@ -95,7 +111,11 @@ it("preserves project and pinned order while discarding ordinary workspace order
       pinnedWorkspaceOrder: ["h:y", "h:x"],
       workspaceOrderByProject: { a: ["h:old", "h:new"] },
     }),
-  ).toEqual({ projectOrder: ["b", "a"], pinnedWorkspaceOrder: ["h:y", "h:x"] });
+  ).toEqual({
+    projectOrder: ["b", "a"],
+    pinnedWorkspaceOrder: ["h:y", "h:x"],
+    labelOrder: [],
+  });
 });
 
 it("preserves whitespace in current project and pin identities during upgrade", () => {
@@ -105,5 +125,9 @@ it("preserves whitespace in current project and pin identities during upgrade", 
       pinnedWorkspaceOrder: ["host:workspace "],
       workspaceOrderByProject: {},
     }),
-  ).toEqual({ projectOrder: ["project "], pinnedWorkspaceOrder: ["host:workspace "] });
+  ).toEqual({
+    projectOrder: ["project "],
+    pinnedWorkspaceOrder: ["host:workspace "],
+    labelOrder: [],
+  });
 });

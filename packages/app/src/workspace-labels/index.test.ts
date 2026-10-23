@@ -70,6 +70,33 @@ describe("workspace label projection", () => {
     expect(projection.targetHost?.status).toBe("offline");
   });
 
+  test("orders merged and per-host labels by the stored label order", () => {
+    const projection = projectWorkspaceLabels(
+      {
+        "host-a": {
+          serverId: "host-a",
+          status: "online",
+          error: null,
+          // Replica order is insertion order, not alphabetical.
+          labels: [
+            { name: "Done", color: "emerald" },
+            { name: "In Review", color: "violet" },
+            { name: "Backlog", color: "sky" },
+          ],
+        },
+      },
+      undefined,
+      ["in review", "backlog"],
+    );
+
+    expect(projection.labels.map((label) => label.name)).toEqual(["In Review", "Done", "Backlog"]);
+    expect(projection.hosts[0]?.labels.map((label) => label.name)).toEqual([
+      "In Review",
+      "Done",
+      "Backlog",
+    ]);
+  });
+
   test("draws a shared label name in the workspace's own host color", () => {
     // Two hosts, one name, two colors. The cross-host merge would settle this by target
     // precedence and then alphabetical serverId, so a row asking without saying whose row it is
